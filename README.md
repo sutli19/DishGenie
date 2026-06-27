@@ -8,7 +8,7 @@
 
 Discover recipes, manage pantry ingredients, save favorites, and cook smarter with AI-inspired recipe recommendations.
 
-Live Link : 
+Live Link : https://dish-genie-one.vercel.app/login.html
 
 </div>
 
