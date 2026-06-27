@@ -1,0 +1,33 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+
+# Logs
+*.log
+
+# Node modules
+node_modules/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Environment variables
+.env
+
+# Cache
+.cache/
+
+# Build folders
+dist/
+build/
+
+# Local settings
+.idea/
+
+# Mac files
+.AppleDouble
+.LSOverride

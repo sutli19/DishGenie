@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DishGenie - LocalStorage Viewer</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: Arial, sans-serif; 
+            background: linear-gradient(135deg, #e8f5e8 0%, #fff3e0 50%, #f0f4ff 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1f2937;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .storage-item {
+            background: #f9fafb;
+            border: 2px solid #e5e7eb;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .storage-key {
+            font-size: 18px;
+            font-weight: bold;
+            color: #10b981;
+            margin-bottom: 10px;
+        }
+        .storage-value {
+            background: #1f2937;
+            color: #10b981;
+            padding: 15px;
+            border-radius: 10px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        .btn {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+        .btn-secondary {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6b7280;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #f0fdf4 0%, #d1fae5 100%);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #10b981;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #6b7280;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 DishGenie LocalStorage Viewer</h1>
+        
+        <div class="actions">
+            <button class="btn" onclick="loadData()">🔄 Refresh Data</button>
+            <button class="btn btn-secondary" onclick="exportData()">📥 Export JSON</button>
+            <button class="btn btn-danger" onclick="clearAllData()">🗑️ Clear All Data</button>
+        </div>
+
+        <div class="stats" id="stats"></div>
+        
+        <div id="storageContent"></div>
+    </div>
+
+    <script>
+        function loadData() {
+            const content = document.getElementById('storageContent');
+            const stats = document.getElementById('stats');
+            
+            if (localStorage.length === 0) {
+                content.innerHTML = `
+                    <div class="empty-state">
+                        <div style="font-size: 64px; margin-bottom: 20px;">📦</div>
+                        <div style="font-size: 20px; font-weight: bold; margin-bottom: 10px;">No Data Found</div>
+                        <div>LocalStorage is empty. Sign up or add some data first!</div>
+                    </div>
+                `;
+                stats.innerHTML = '';
+                return;
+            }
+
+            // Calculate stats
+            const usersDB = JSON.parse(localStorage.getItem('usersDatabase') || '{}');
+            const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+            const favorites = JSON.parse(localStorage.getItem('dishgenie_favorites') || '[]');
+            const pantry = JSON.parse(localStorage.getItem('pantryItems') || '[]');
+
+            stats.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-number">${Object.keys(usersDB).length}</div>
+                    <div class="stat-label">Registered Users</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${currentUser ? '✓' : '✗'}</div>
+                    <div class="stat-label">User Logged In</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${favorites.length}</div>
+                    <div class="stat-label">Favorite Recipes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${pantry.length}</div>
+                    <div class="stat-label">Pantry Items</div>
+                </div>
+            `;
+
+            // Display all localStorage items
+            let html = '';
+            Object.keys(localStorage).sort().forEach(key => {
+                const value = localStorage.getItem(key);
+                let formattedValue;
+                
+                try {
+                    formattedValue = JSON.stringify(JSON.parse(value), null, 2);
+                } catch {
+                    formattedValue = value;
+                }
+
+                html += `
+                    <div class="storage-item">
+                        <div class="storage-key">🔑 ${key}</div>
+                        <div class="storage-value">${formattedValue}</div>
+                    </div>
+                `;
+            });
+
+            content.innerHTML = html;
+        }
+
+        function exportData() {
+            const data = {};
+            Object.keys(localStorage).forEach(key => {
+                try {
+                    data[key] = JSON.parse(localStorage.getItem(key));
+                } catch {
+                    data[key] = localStorage.getItem(key);
+                }
+            });
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `dishgenie-data-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            alert('Data exported successfully!');
+        }
+
+        function clearAllData() {
+            if (confirm('⚠️ Are you sure you want to clear ALL localStorage data? This cannot be undone!')) {
+                localStorage.clear();
+                loadData();
+                alert('All data cleared!');
+            }
+        }
+
+        // Load data on page load
+        loadData();
+    </script>
+</body>
+</html>

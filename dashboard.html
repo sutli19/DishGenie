@@ -1,0 +1,1416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DishGenie - Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Arial', sans-serif; 
+            background: linear-gradient(135deg, #e8f5e8 0%, #fff3e0 50%, #f0f4ff 100%); 
+            min-height: 100vh; 
+            color: #333; 
+        }
+        .header {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fffe 100%);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .logo-image { width: 150px; height: auto; animation: gentleBounce 3s ease-in-out infinite; }
+        @keyframes gentleBounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-8px); }
+            60% { transform: translateY(-4px); }
+        }
+        .header-right { display: flex; align-items: center; gap: 20px; }
+        .user-greeting { font-size: 18px; font-weight: 700; color: #1f2937; }
+        .settings-container { position: relative; }
+        .settings-btn {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border: none; border-radius: 50%; width: 50px; height: 50px;
+            color: white; cursor: pointer; font-size: 20px;
+            transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+        .settings-btn:hover { transform: rotate(90deg) scale(1.1); }
+        
+        .settings-dropdown {
+            position: absolute; top: 60px; right: 0;
+            background: white; border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            min-width: 250px; opacity: 0; visibility: hidden;
+            transform: translateY(-10px); transition: all 0.3s ease;
+            z-index: 1001;
+        }
+        .settings-dropdown.active { opacity: 1; visibility: visible; transform: translateY(0); }
+        .dropdown-header {
+            padding: 20px; border-bottom: 1px solid #f0f0f0;
+            display: flex; justify-content: space-between; align-items: center;
+            background: linear-gradient(135deg, #f8fffe 0%, #f0f9f0 100%);
+            border-radius: 15px 15px 0 0;
+        }
+        .dropdown-title { font-size: 18px; font-weight: bold; color: #1f2937; }
+        .close-btn { background: none; border: none; font-size: 24px; color: #6b7280; cursor: pointer; }
+        .settings-option {
+            padding: 15px 20px; cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .settings-option:hover { background: linear-gradient(135deg, #f0fdf4 0%, #fff7ed 100%); }
+        
+        .search-section { padding: 30px; text-align: center; }
+        .search-container { max-width: 800px; margin: 0 auto; position: relative; }
+        .search-wrapper {
+            display: flex; align-items: center; background: white;
+            border-radius: 25px; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            padding: 8px; border: 2px solid transparent;
+        }
+        .search-wrapper:focus-within { border-color: #10b981; }
+        .search-input {
+            flex: 1; border: none; outline: none;
+            padding: 15px 10px; font-size: 16px;
+        }
+        .search-buttons { display: flex; gap: 8px; padding: 5px; }
+        .search-btn {
+            width: 45px; height: 45px; border: none;
+            border-radius: 50%; cursor: pointer;
+            font-size: 16px; color: white;
+            transition: all 0.3s ease;
+        }
+        .filter-btn {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+        }
+        .filter-btn:hover { transform: scale(1.1); }
+        .mic-btn {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+        }
+        .mic-btn:hover { transform: scale(1.1); }
+        .mic-btn.recording {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        #searchSuggestions {
+            position: absolute; top: 100%; left: 0; right: 0;
+            background: white; border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            max-height: 400px; overflow-y: auto;
+            margin-top: 10px; z-index: 1000; display: none;
+        }
+        .suggestion-item {
+            padding: 12px 15px; cursor: pointer;
+            border-bottom: 1px solid #f3f4f6;
+            display: flex; align-items: center; gap: 10px;
+            transition: background 0.2s;
+        }
+        .suggestion-item:hover { background: #f0fdf4; }
+        
+        .navigation {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fffe 100%);
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+            padding: 20px 0;
+        }
+        .nav-container {
+            display: flex; justify-content: center;
+            gap: 20px; flex-wrap: wrap;
+        }
+        .nav-item {
+            background: linear-gradient(135deg, #f8fffe 0%, #ffffff 100%);
+            border: 2px solid #e5e7eb; border-radius: 25px;
+            padding: 12px 25px; cursor: pointer;
+            transition: all 0.3s ease; font-weight: 500;
+            display: flex; align-items: center; gap: 8px;
+            text-decoration: none; color: #333;
+        }
+        .nav-item:hover, .nav-item.active {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white; border-color: #10b981;
+            transform: translateY(-3px);
+        }
+        
+        .filter-modal {
+            display: none; position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 3000;
+            align-items: center; justify-content: center;
+            overflow-y: auto; padding: 20px;
+        }
+        .filter-content {
+            background: white; border-radius: 20px;
+            max-width: 700px; width: 90%;
+            padding: 30px; max-height: 90vh;
+            overflow-y: auto; margin: 20px auto;
+        }
+        .filter-header {
+            display: flex; justify-content: space-between;
+            align-items: center; margin-bottom: 25px;
+        }
+        .filter-header h2 { font-size: 24px; color: #1f2937; }
+        
+        .filter-group {
+            margin-bottom: 25px;
+            background: #f9fafb;
+            padding: 20px; border-radius: 15px;
+        }
+        .filter-group h3 {
+            margin-bottom: 15px; color: #1f2937;
+            font-size: 18px; display: flex;
+            align-items: center; gap: 8px;
+        }
+        .filter-options {
+            display: flex; flex-wrap: wrap; gap: 10px;
+        }
+        .filter-chip {
+            padding: 8px 16px; border: 2px solid #e5e7eb;
+            border-radius: 20px; cursor: pointer;
+            transition: all 0.3s; background: white;
+            font-size: 14px; font-weight: 500;
+        }
+        .filter-chip:hover { border-color: #10b981; }
+        .filter-chip.active {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white; border-color: #10b981;
+        }
+        
+        .slider-container {
+            display: flex; align-items: center; gap: 15px;
+        }
+        .slider {
+            flex: 1; height: 8px; border-radius: 5px;
+            background: #e5e7eb; outline: none;
+            -webkit-appearance: none;
+        }
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 20px; height: 20px;
+            border-radius: 50%; background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            cursor: pointer;
+        }
+        .slider-value {
+            font-weight: 600; color: #10b981;
+            min-width: 80px; text-align: right;
+        }
+        
+        .time-input-group {
+            display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+        }
+        .time-input-group select, .time-input-group input {
+            padding: 10px; border: 2px solid #e5e7eb;
+            border-radius: 8px; font-size: 14px;
+        }
+        .time-input-group input {
+            width: 100px;
+        }
+        .time-error {
+            color: #ef4444; font-size: 12px;
+            margin-top: 5px; display: none;
+        }
+        
+        .bmi-section {
+            background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+            border: 2px dashed #10b981;
+            border-radius: 15px; padding: 20px;
+            margin-top: 15px; display: none;
+        }
+        .bmi-section.active { display: block; }
+        .bmi-inputs {
+            display: grid; grid-template-columns: repeat(2, 1fr);
+            gap: 15px; margin-bottom: 15px;
+        }
+        .bmi-input-group {
+            display: flex; flex-direction: column; gap: 5px;
+        }
+        .bmi-input-group label {
+            font-size: 14px; font-weight: 600; color: #4b5563;
+        }
+        .bmi-input-group input, .bmi-input-group select {
+            padding: 10px; border: 2px solid #e5e7eb;
+            border-radius: 8px; font-size: 14px;
+        }
+        .bmi-result {
+            background: white; padding: 15px;
+            border-radius: 10px; margin-top: 15px;
+            text-align: center; font-weight: 600;
+            display: none;
+        }
+        .bmi-result.active { display: block; }
+        
+        .filter-actions {
+            display: flex; flex-direction: column; gap: 10px;
+            margin-top: 20px;
+        }
+        .apply-filters-btn, .clear-all-btn {
+            width: 100%; padding: 15px; border: none;
+            border-radius: 15px; font-size: 16px;
+            font-weight: bold; cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .apply-filters-btn {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+        .apply-filters-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+        }
+        .clear-all-btn {
+            background: #ef4444; color: white;
+        }
+        .clear-all-btn:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+        }
+        
+        .pantry-alert {
+            background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%);
+            border: 2px solid #f59e0b; border-radius: 15px;
+            padding: 20px; margin-bottom: 20px;
+            display: none;
+        }
+        .pantry-alert.active { display: block; }
+        .alert-title {
+            font-size: 18px; font-weight: bold;
+            color: #92400e; margin-bottom: 10px;
+        }
+        .alert-text {
+            color: #78350f; margin-bottom: 15px;
+        }
+        .recipe-pills {
+            display: flex; flex-wrap: wrap; gap: 10px;
+        }
+        .recipe-pill {
+            background: white; padding: 8px 16px;
+            border-radius: 20px; font-size: 14px;
+            font-weight: 600; color: #10b981;
+            cursor: pointer; transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border: none;
+        }
+        .recipe-pill:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .main-content {
+            padding: 30px; max-width: 1200px; margin: 0 auto;
+        }
+        .banner {
+            background: linear-gradient(135deg, #10b981 0%, #059669 50%, #f59e0b 100%);
+            color: white; padding: 40px; border-radius: 20px;
+            text-align: center; margin-bottom: 30px;
+        }
+        .banner h2 { font-size: 28px; margin-bottom: 10px; }
+        
+        .content-section { margin-bottom: 40px; }
+        .section-title {
+            font-size: 24px; font-weight: bold;
+            color: #1f2937; margin-bottom: 20px;
+        }
+        .recipe-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        .recipe-card {
+            background: white; border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            overflow: hidden; transition: all 0.3s ease;
+            cursor: pointer; position: relative;
+        }
+        .recipe-card:hover { transform: translateY(-5px); }
+        .recipe-image {
+            height: 150px;
+            background: linear-gradient(135deg, #10b981 0%, #f59e0b 100%);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 48px;
+        }
+        .favorite-btn {
+            position: absolute; top: 10px; right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            border: none; width: 35px; height: 35px;
+            border-radius: 50%; font-size: 20px;
+            cursor: pointer; z-index: 10;
+            transition: transform 0.2s;
+        }
+        .favorite-btn:hover { transform: scale(1.1); }
+        .recipe-content { padding: 20px; }
+        .recipe-title {
+            font-size: 18px; font-weight: bold;
+            color: #1f2937; margin-bottom: 8px;
+        }
+        .recipe-meta {
+            display: flex; gap: 15px;
+            color: #6b7280; font-size: 14px;
+        }
+
+        /* CHANGE INFORMATION MODAL STYLES */
+        .change-info-modal {
+            display: none; position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 5000;
+            align-items: center; justify-content: center;
+            overflow-y: auto; padding: 20px;
+        }
+        .change-info-content {
+            background: white; border-radius: 20px;
+            max-width: 500px; width: 90%;
+            padding: 30px; max-height: 90vh;
+            overflow-y: auto; margin: 20px auto;
+        }
+        .change-info-header {
+            display: flex; justify-content: space-between;
+            align-items: center; margin-bottom: 25px;
+        }
+        .change-info-header h2 { 
+            font-size: 24px; color: #1f2937;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .info-input-group {
+            margin-bottom: 20px;
+        }
+        .info-input-group label {
+            display: block; color: #4b5563;
+            font-size: 14px; font-weight: 500;
+            margin-bottom: 8px;
+        }
+        .info-input-group input, .info-input-group select {
+            width: 100%; padding: 14px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px; font-size: 14px;
+            background-color: #f9fafb;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+        .info-input-group input:focus, .info-input-group select:focus {
+            border-color: #10b981;
+            background-color: white;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+        .info-input-group input:disabled {
+            background-color: #e5e7eb;
+            cursor: not-allowed;
+            color: #6b7280;
+        }
+        .password-wrapper-info {
+            position: relative;
+        }
+        .toggle-password-info {
+            position: absolute;
+            right: 12px; top: 50%;
+            transform: translateY(-50%);
+            background: none; border: none;
+            cursor: pointer; font-size: 16px;
+            color: #6b7280;
+            transition: color 0.3s ease;
+        }
+        .toggle-password-info:hover {
+            color: #10b981;
+        }
+        .info-feedback {
+            font-size: 12px; margin-top: 5px;
+            min-height: 16px; display: block;
+        }
+        .update-info-btn {
+            width: 100%; padding: 15px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white; border: none;
+            border-radius: 15px; font-size: 16px;
+            font-weight: bold; cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        .update-info-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+        }
+        .update-info-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .info-note {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #92400e;
+        }
+        
+        @media (max-width: 768px) {
+            .header { padding: 10px 15px; }
+            .logo-image { width: 120px; }
+            .recipe-grid { grid-template-columns: 1fr; }
+            .bmi-inputs { grid-template-columns: 1fr; }
+            .nav-container { gap: 10px; }
+            .nav-item { padding: 10px 15px; font-size: 14px; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <img src="DishGenie.png" alt="DishGenie" class="logo-image">
+        <div class="header-right">
+            <span class="user-greeting" id="userGreeting">Hello, User!</span>
+            <div class="settings-container">
+                <button class="settings-btn" onclick="toggleSettings()">⚙️</button>
+                <div class="settings-dropdown" id="settingsDropdown">
+                    <div class="dropdown-header">
+                        <span class="dropdown-title">Settings</span>
+                        <button class="close-btn" onclick="toggleSettings()">×</button>
+                    </div>
+                    <div class="settings-option" onclick="handleSettings('profile')">
+                        <span>👤</span> Change Information
+                    </div>
+                    <div class="settings-option" onclick="handleSettings('favorites')">
+                        <span>❤️</span> Favorites
+                    </div>
+                    <div class="settings-option" onclick="handleSettings('logout')">
+                        <span>🚪</span> Logout
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section class="search-section">
+        <div class="search-container">
+            <div class="search-wrapper">
+                <div style="padding: 12px 15px; color: #6b7280; font-size: 18px;">🔍</div>
+                <input type="text" class="search-input" placeholder="Search from 100 recipes..." id="searchInput" autocomplete="off">
+                <div class="search-buttons">
+                    <button class="search-btn filter-btn" onclick="openFilters()">🔽</button>
+                    <button class="search-btn mic-btn" onclick="toggleVoice()" id="micBtn">🎤</button>
+                </div>
+            </div>
+            <div id="searchSuggestions"></div>
+        </div>
+    </section>
+
+    <nav class="navigation">
+        <div class="nav-container">
+            <a href="dashboard.html" class="nav-item active">
+                <span>🏠</span> Home
+            </a>
+            <a href="recipes.html" class="nav-item">
+                <span>📖</span> Recipes
+            </a>
+            <a href="ingredients.html" class="nav-item">
+                <span>🥕</span> Ingredients
+            </a>
+            <a href="pantry.html" class="nav-item">
+                <span>🪔</span> Pantry
+            </a>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="pantry-alert" id="pantryAlert">
+            <div class="alert-title" id="alertTitle"></div>
+            <div class="alert-text" id="alertText"></div>
+            <div class="recipe-pills" id="pantryRecipes"></div>
+        </div>
+        
+        <div class="banner" id="banner">
+            <h2>🍳 What's Cooking Today?</h2>
+            <p>Discover amazing recipes based on your preferences!</p>
+        </div>
+
+        <div class="content-section" id="filteredSection" style="display: none;">
+            <h2 class="section-title">🎯 Based on Your Selected Filters</h2>
+            <div class="recipe-grid" id="filteredGrid"></div>
+        </div>
+
+        <div class="content-section">
+            <h2 class="section-title">⚡ Quick Recipes</h2>
+            <div class="recipe-grid" id="quickGrid"></div>
+        </div>
+
+        <div class="content-section">
+            <h2 class="section-title">❤️ Your Favorites</h2>
+            <div class="recipe-grid" id="favoritesGrid"></div>
+        </div>
+    </main>
+
+    <div class="filter-modal" id="filterModal">
+        <div class="filter-content">
+            <div class="filter-header">
+                <h2>🎛️ Filter Recipes</h2>
+            </div>
+
+            <div class="filter-group">
+                <h3>😊 Mood</h3>
+                <div class="filter-options">
+                    <div class="filter-chip" data-type="mood" data-value="comfort" onclick="toggleChip(this)">Comfort</div>
+                    <div class="filter-chip" data-type="mood" data-value="happy" onclick="toggleChip(this)">Happy</div>
+                    <div class="filter-chip" data-type="mood" data-value="sad" onclick="toggleChip(this)">Sad</div>
+                    <div class="filter-chip" data-type="mood" data-value="energetic" onclick="toggleChip(this)">Energetic</div>
+                    <div class="filter-chip" data-type="mood" data-value="adventurous" onclick="toggleChip(this)">Adventurous</div>
+                    <div class="filter-chip" data-type="mood" data-value="indulgent" onclick="toggleChip(this)">Indulgent</div>
+                </div>
+            </div>
+
+            <div class="filter-group">
+                <h3>👅 Taste</h3>
+                <div class="filter-options">
+                    <div class="filter-chip" data-type="taste" data-value="sweet" onclick="toggleChip(this)">Sweet</div>
+                    <div class="filter-chip" data-type="taste" data-value="savory" onclick="toggleChip(this)">Savory</div>
+                    <div class="filter-chip" data-type="taste" data-value="spicy" onclick="toggleChip(this)">Spicy</div>
+                    <div class="filter-chip" data-type="taste" data-value="tangy" onclick="toggleChip(this)">Tangy</div>
+                    <div class="filter-chip" data-type="taste" data-value="creamy" onclick="toggleChip(this)">Creamy</div>
+                    <div class="filter-chip" data-type="taste" data-value="sour" onclick="toggleChip(this)">Sour</div>
+                </div>
+            </div>
+
+            <div class="filter-group">
+                <h3>🍽️ Meal Type</h3>
+                <div class="filter-options">
+                    <div class="filter-chip" data-type="meal" data-value="breakfast" onclick="toggleChip(this)">Breakfast</div>
+                    <div class="filter-chip" data-type="meal" data-value="lunch" onclick="toggleChip(this)">Lunch</div>
+                    <div class="filter-chip" data-type="meal" data-value="dinner" onclick="toggleChip(this)">Dinner</div>
+                    <div class="filter-chip" data-type="meal" data-value="snack" onclick="toggleChip(this)">Snack</div>
+                    <div class="filter-chip" data-type="meal" data-value="dessert" onclick="toggleChip(this)">Dessert</div>
+                </div>
+            </div>
+
+            <div class="filter-group">
+                <h3>🥗 Diet</h3>
+                <div class="filter-options">
+                    <div class="filter-chip" data-type="diet" data-value="veg" onclick="toggleChip(this)">🥬 Vegetarian</div>
+                    <div class="filter-chip" data-type="diet" data-value="non-veg" onclick="toggleChip(this)">🍖 Non-Veg</div>
+                </div>
+            </div>
+
+            <div class="filter-group">
+                <h3>⏱️ Cooking Time (Max 60 min)</h3>
+                <div class="time-input-group">
+                    <select id="timeOperator">
+                        <option value="under">Under</option>
+                        <option value="exactly">Exactly</option>
+                        <option value="over">Over</option>
+                    </select>
+                    <input type="number" id="timeValue" placeholder="Minutes" min="1" max="60">
+                    <span>minutes</span>
+                </div>
+                <div class="time-error" id="timeError">⚠️ Maximum 60 minutes allowed!</div>
+            </div>
+
+            <div class="filter-group">
+                <h3>🔥 Calories (Max 720)</h3>
+                <div class="slider-container">
+                    <input type="range" class="slider" id="caloriesSlider" min="0" max="720" value="720">
+                    <div class="slider-value" id="caloriesValue">720 cal</div>
+                </div>
+            </div>
+
+            <div class="filter-group">
+                <h3>📊 BMI Calculator</h3>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="enableBMI" onchange="toggleBMI()">
+                    <span>Enable BMI-based recommendations</span>
+                </label>
+                <div class="bmi-section" id="bmiSection">
+                    <div class="bmi-inputs">
+                        <div class="bmi-input-group">
+                            <label>Height (cm)</label>
+                            <input type="number" id="height" placeholder="170">
+                        </div>
+                        <div class="bmi-input-group">
+                            <label>Weight (kg)</label>
+                            <input type="number" id="weight" placeholder="70">
+                        </div>
+                        <div class="bmi-input-group">
+                            <label>Age</label>
+                            <input type="number" id="age" placeholder="25">
+                        </div>
+                        <div class="bmi-input-group">
+                            <label>Gender</label>
+                            <select id="gender">
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 10px;">Goal:</label>
+                        <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                <input type="radio" name="goal" value="lose" checked> Lose Weight
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                <input type="radio" name="goal" value="maintain"> Maintain
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                <input type="radio" name="goal" value="gain"> Gain Weight
+                            </label>
+                        </div>
+                    </div>
+                    <button onclick="calculateBMI()" style="width: 100%; margin-top: 15px; padding: 10px; background: #10b981; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Calculate BMI</button>
+                    <div class="bmi-result" id="bmiResult"></div>
+                </div>
+            </div>
+
+            <div class="filter-actions">
+                <button class="apply-filters-btn" onclick="applyFilters()">Apply Filters</button>
+                <button class="clear-all-btn" onclick="clearAllFilters()">Clear All Filters</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CHANGE INFORMATION MODAL -->
+    <div class="change-info-modal" id="changeInfoModal">
+        <div class="change-info-content">
+            <div class="change-info-header">
+                <h2><span>👤</span> Change Information</h2>
+                <button class="close-btn" onclick="closeChangeInfo()">×</button>
+            </div>
+
+            <div class="info-note">
+                ⚠️ <strong>Note:</strong> User ID cannot be changed. Update other details as needed.
+            </div>
+
+            <form id="changeInfoForm">
+                <!-- Full Name -->
+                <div class="info-input-group">
+                    <label for="updateFullName">Full Name</label>
+                    <input 
+                        type="text" 
+                        id="updateFullName" 
+                        placeholder="Enter your full name"
+                        required
+                    >
+                </div>
+
+                <!-- User ID (Disabled) -->
+                <div class="info-input-group">
+                    <label for="updateUserId">User ID (Cannot be changed)</label>
+                    <input 
+                        type="text" 
+                        id="updateUserId" 
+                        disabled
+                    >
+                </div>
+
+                <!-- New Password -->
+                <div class="info-input-group">
+                    <label for="updatePassword">New Password (Leave blank to keep current)</label>
+                    <div class="password-wrapper-info">
+                        <input 
+                            type="password" 
+                            id="updatePassword" 
+                            placeholder="Enter new password (optional)"
+                        >
+                        <button type="button" class="toggle-password-info" onclick="togglePasswordInfo('updatePassword', 'eyeIconUpdate1')">
+                            <span id="eyeIconUpdate1">👁️</span>
+                        </button>
+                    </div>
+                    <small class="info-feedback" id="updatePasswordFeedback"></small>
+                </div>
+
+                <!-- Confirm New Password -->
+                <div class="info-input-group">
+                    <label for="updateConfirmPassword">Confirm New Password</label>
+                    <div class="password-wrapper-info">
+                        <input 
+                            type="password" 
+                            id="updateConfirmPassword" 
+                            placeholder="Confirm new password"
+                        >
+                        <button type="button" class="toggle-password-info" onclick="togglePasswordInfo('updateConfirmPassword', 'eyeIconUpdate2')">
+                            <span id="eyeIconUpdate2">👁️</span>
+                        </button>
+                    </div>
+                    <small class="info-feedback" id="updatePasswordMatch"></small>
+                </div>
+
+                <!-- Security Question -->
+                <div class="info-input-group">
+                    <label for="updateSecurityQuestion">Security Question</label>
+                    <select id="updateSecurityQuestion" required>
+                        <option value="">Choose a security question...</option>
+                        <option value="What's your favorite food?">What's your favorite food?</option>
+                        <option value="What's your favorite animal?">What's your favorite animal?</option>
+                        <option value="What city were you born in?">What city were you born in?</option>
+                        <option value="What's your mother's maiden name?">What's your mother's maiden name?</option>
+                        <option value="What's your favorite color?">What's your favorite color?</option>
+                        <option value="What was your first pet's name?">What was your first pet's name?</option>
+                        <option value="What's your favorite movie?">What's your favorite movie?</option>
+                        <option value="What's your childhood nickname?">What's your childhood nickname?</option>
+                        <option value="What street did you grow up on?">What street did you grow up on?</option>
+                        <option value="What's your favorite book?">What's your favorite book?</option>
+                    </select>
+                </div>
+
+                <!-- Security Answer -->
+                <div class="info-input-group">
+                    <label for="updateSecurityAnswer">Security Answer</label>
+                    <input 
+                        type="text" 
+                        id="updateSecurityAnswer" 
+                        placeholder="Enter your answer"
+                        required
+                    >
+                </div>
+
+                <!-- Update Button -->
+                <button type="submit" class="update-info-btn" id="updateInfoBtn">
+                    Update Information
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const recipes = [
+            {id:1,name:"Spaghetti Aglio e Olio",image:"🍝",time:20,calories:420,protein:12,carbs:68,fat:14,diet:"veg",mood:["comfort"],taste:["savory"],meal:["dinner"]},
+            {id:2,name:"Butter Chicken",image:"🍛",time:50,calories:800,protein:45,carbs:32,fat:28,diet:"non-veg",mood:["comfort"],taste:["spicy"],meal:["dinner"]},
+            {id:3,name:"Avocado Toast",image:"🥑",time:15,calories:320,protein:12,carbs:36,fat:18,diet:"veg",mood:["energetic"],taste:["savory"],meal:["breakfast"]},
+            {id:4,name:"Pad Thai",image:"🍜",time:30,calories:510,protein:28,carbs:62,fat:18,diet:"non-veg",mood:["adventurous"],taste:["sweet"],meal:["lunch"]},
+            {id:5,name:"Chocolate Lava Cake",image:"🍰",time:25,calories:450,protein:8,carbs:54,fat:24,diet:"veg",mood:["indulgent","sad"],taste:["sweet"],meal:["dessert"]},
+            {id:6,name:"Caesar Salad",image:"🥗",time:25,calories:380,protein:32,carbs:18,fat:22,diet:"non-veg",mood:["happy"],taste:["savory"],meal:["lunch"]},
+            {id:7,name:"Veggie Stir Fry",image:"🥘",time:20,calories:250,protein:8,carbs:38,fat:9,diet:"veg",mood:["happy"],taste:["savory"],meal:["dinner"]},
+            {id:8,name:"Margherita Pizza",image:"🍕",time:45,calories:520,protein:22,carbs:68,fat:18,diet:"veg",mood:["comfort"],taste:["savory"],meal:["dinner"]},
+            {id:9,name:"Salmon Teriyaki",image:"🍟",time:30,calories:420,protein:38,carbs:42,fat:12,diet:"non-veg",mood:["happy"],taste:["savory"],meal:["dinner"]},
+            {id:10,name:"Vegetable Biryani",image:"🍚",time:60,calories:450,protein:12,carbs:78,fat:12,diet:"veg",mood:["comfort"],taste:["spicy"],meal:["dinner"]},
+            {id:11,name:"Greek Salad",image:"🥗",time:15,calories:280,protein:8,carbs:18,fat:20,diet:"veg",mood:["energetic"],taste:["tangy"],meal:["lunch"]},
+            {id:12,name:"Beef Burger",image:"🍔",time:35,calories:720,protein:42,carbs:54,fat:36,diet:"non-veg",mood:["indulgent"],taste:["savory"],meal:["lunch"]},
+            {id:13,name:"Tom Yum Soup",image:"🍲",time:30,calories:180,protein:22,carbs:12,fat:6,diet:"non-veg",mood:["comfort"],taste:["spicy"],meal:["dinner"]},
+            {id:14,name:"Fluffy Pancakes",image:"🥞",time:20,calories:380,protein:12,carbs:58,fat:12,diet:"veg",mood:["happy"],taste:["sweet"],meal:["breakfast"]},
+            {id:15,name:"Chicken Tikka Masala",image:"🍛",time:55,calories:520,protein:48,carbs:28,fat:24,diet:"non-veg",mood:["comfort"],taste:["spicy"],meal:["dinner"]}
+        ];
+
+        let favorites = new Set();
+        let filters = { mood: [], taste: [], meal: [], diet: [], time: null, timeOp: 'under', calories: 720, bmiEnabled: false, bmiData: null };
+        let currentUser = { userId: 'demo', name: 'Demo User' };
+        let isRecording = false;
+        let recognition = null;
+
+        function loadUsersDatabase() {
+            const data = localStorage.getItem('usersDatabase');
+            return data ? JSON.parse(data) : {};
+        }
+
+        function saveUsersDatabase(db) {
+            localStorage.setItem('usersDatabase', JSON.stringify(db));
+        }
+
+        function validatePassword(password) {
+            if (password.length < 8) return "Password must be at least 8 characters";
+            if (!/[A-Z]/.test(password)) return "Must include uppercase letter";
+            if (!/[a-z]/.test(password)) return "Must include lowercase letter";
+            if (!/[0-9]/.test(password)) return "Must include number";
+            if (!/[!@#$%^&*]/.test(password)) return "Must include special character";
+            return "";
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const saved = localStorage.getItem('currentUser');
+            if (saved) currentUser = JSON.parse(saved);
+            document.getElementById('userGreeting').textContent = `Hello, ${currentUser.name}!`;
+            
+            const savedFavs = localStorage.getItem(`favorites_${currentUser.userId}`);
+            if (savedFavs) favorites = new Set(JSON.parse(savedFavs));
+            
+            setupSearch();
+            loadQuickRecipes();
+            loadFavorites();
+            checkPantryAlerts();
+            syncFavoritesFromRecipePage();
+            
+            setInterval(syncFavoritesFromRecipePage, 2000);
+        });
+
+        function setupSearch() {
+            const input = document.getElementById('searchInput');
+            const suggestions = document.getElementById('searchSuggestions');
+            
+            input.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase().trim();
+                if (!query) {
+                    suggestions.style.display = 'none';
+                    return;
+                }
+                
+                const matches = recipes.filter(r => r.name.toLowerCase().includes(query));
+                
+                if (matches.length > 0) {
+                    suggestions.innerHTML = matches.map(r => `
+                        <div class="suggestion-item" onclick="selectRecipe('${r.name.replace(/'/g, "\\'")}')">
+                            <span style="font-size: 24px;">${r.image}</span>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600;">${r.name}</div>
+                                <div style="font-size: 12px; color: #6b7280;">⏱️ ${r.time}min • 🔥 ${r.calories}cal • ${r.diet === 'veg' ? '🥬 Veg' : '🍖 Non-Veg'}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                    suggestions.style.display = 'block';
+                } else {
+                    suggestions.innerHTML = '<div style="padding: 20px; text-align: center; color: #6b7280;">No recipes found</div>';
+                    suggestions.style.display = 'block';
+                }
+            });
+            
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const query = input.value.trim();
+                    if (query) {
+                        performSearch(query);
+                        suggestions.style.display = 'none';
+                    }
+                }
+            });
+        }
+
+        function selectRecipe(name) {
+            document.getElementById('searchInput').value = name;
+            document.getElementById('searchSuggestions').style.display = 'none';
+            performSearch(name);
+        }
+
+        function performSearch(query) {
+            const results = recipes.filter(recipe => 
+                recipe.name.toLowerCase().includes(query.toLowerCase())
+            );
+            
+            if (results.length > 0) {
+                document.getElementById('banner').style.display = 'none';
+                document.getElementById('filteredSection').style.display = 'block';
+                document.querySelector('#filteredSection .section-title').textContent = '🔍 Search Results for "' + query + '"';
+                document.getElementById('filteredGrid').innerHTML = results.map(createCard).join('');
+                document.getElementById('filteredSection').scrollIntoView({ behavior: 'smooth' });
+            } else {
+                alert(`No recipes found for "${query}"`);
+            }
+        }
+
+        function toggleSettings() {
+            document.getElementById('settingsDropdown').classList.toggle('active');
+        }
+
+        function handleSettings(action) {
+            toggleSettings();
+            if (action === 'profile') {
+                openChangeInfo();
+            } else if (action === 'favorites') {
+                document.getElementById('favoritesGrid').scrollIntoView({ behavior: 'smooth' });
+            } else if (action === 'logout') {
+                if (confirm('Logout?')) {
+                    localStorage.removeItem('currentUser');
+                    window.location.href = 'login.html';
+                }
+            }
+        }
+
+        function openChangeInfo() {
+            const usersDatabase = loadUsersDatabase();
+            const userData = usersDatabase[currentUser.userId];
+            
+            if (userData) {
+                document.getElementById('updateFullName').value = userData.name;
+                document.getElementById('updateUserId').value = userData.userId;
+                document.getElementById('updatePassword').value = '';
+                document.getElementById('updateConfirmPassword').value = '';
+                document.getElementById('updateSecurityQuestion').value = userData.securityQuestion;
+                document.getElementById('updateSecurityAnswer').value = userData.securityAnswer;
+                
+                document.getElementById('updatePasswordFeedback').textContent = '';
+                document.getElementById('updatePasswordMatch').textContent = '';
+            }
+            
+            document.getElementById('changeInfoModal').style.display = 'flex';
+        }
+
+        function closeChangeInfo() {
+            document.getElementById('changeInfoModal').style.display = 'none';
+        }
+
+        function togglePasswordInfo(inputId, iconId) {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(iconId);
+            if (input && icon) {
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    icon.textContent = '🙈';
+                } else {
+                    input.type = 'password';
+                    icon.textContent = '👁️';
+                }
+            }
+        }
+
+        function checkUpdatePasswordMatch() {
+            const password = document.getElementById('updatePassword').value;
+            const confirmPassword = document.getElementById('updateConfirmPassword').value;
+            const feedback = document.getElementById('updatePasswordMatch');
+            
+            if (!password && !confirmPassword) {
+                feedback.textContent = '';
+                return true;
+            }
+            
+            if (!confirmPassword) {
+                feedback.textContent = '';
+                return false;
+            }
+            
+            if (password === confirmPassword) {
+                feedback.textContent = '✓ Passwords match';
+                feedback.style.color = '#10b981';
+                return true;
+            } else {
+                feedback.textContent = '✗ Passwords do not match';
+                feedback.style.color = '#ef4444';
+                return false;
+            }
+        }
+
+        document.getElementById('updatePassword').addEventListener('input', function() {
+            const feedback = document.getElementById('updatePasswordFeedback');
+            if (this.value) {
+                const error = validatePassword(this.value);
+                if (error) {
+                    feedback.textContent = '✗ ' + error;
+                    feedback.style.color = '#ef4444';
+                } else {
+                    feedback.textContent = '✓ Strong password';
+                    feedback.style.color = '#10b981';
+                }
+            } else {
+                feedback.textContent = '';
+            }
+            
+            if (document.getElementById('updateConfirmPassword').value) {
+                checkUpdatePasswordMatch();
+            }
+        });
+
+        document.getElementById('updateConfirmPassword').addEventListener('input', checkUpdatePasswordMatch);
+
+        document.getElementById('changeInfoForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const fullName = document.getElementById('updateFullName').value.trim();
+            const password = document.getElementById('updatePassword').value;
+            const confirmPassword = document.getElementById('updateConfirmPassword').value;
+            const securityQuestion = document.getElementById('updateSecurityQuestion').value;
+            const securityAnswer = document.getElementById('updateSecurityAnswer').value.trim().toLowerCase();
+            
+            if (!fullName || fullName.length < 2) {
+                alert('Please enter a valid full name');
+                return;
+            }
+            
+            if (password) {
+                const passError = validatePassword(password);
+                if (passError) {
+                    alert(passError);
+                    return;
+                }
+                
+                if (password !== confirmPassword) {
+                    alert('Passwords do not match');
+                    return;
+                }
+            }
+            
+            if (!securityQuestion) {
+                alert('Please select a security question');
+                return;
+            }
+            
+            if (!securityAnswer || securityAnswer.length < 2) {
+                alert('Please provide a security answer');
+                return;
+            }
+            
+            const btn = document.getElementById('updateInfoBtn');
+            btn.disabled = true;
+            btn.textContent = 'Updating...';
+            
+            setTimeout(() => {
+                let usersDatabase = loadUsersDatabase();
+                
+                usersDatabase[currentUser.userId] = {
+                    name: fullName,
+                    userId: currentUser.userId,
+                    password: password || usersDatabase[currentUser.userId].password,
+                    securityQuestion: securityQuestion,
+                    securityAnswer: securityAnswer
+                };
+                
+                saveUsersDatabase(usersDatabase);
+                
+                currentUser.name = fullName;
+                currentUser.securityQuestion = securityQuestion;
+                currentUser.securityAnswer = securityAnswer;
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                
+                document.getElementById('userGreeting').textContent = `Hello, ${fullName}!`;
+                
+                btn.disabled = false;
+                btn.textContent = 'Update Information';
+                
+                alert('Information updated successfully!');
+                closeChangeInfo();
+            }, 800);
+        });
+
+        function openFilters() {
+            document.getElementById('filterModal').style.display = 'flex';
+        }
+
+        function closeFilters() {
+            document.getElementById('filterModal').style.display = 'none';
+        }
+
+        function toggleChip(chip) {
+            chip.classList.toggle('active');
+            const type = chip.dataset.type;
+            const value = chip.dataset.value;
+            
+            if (chip.classList.contains('active')) {
+                if (!filters[type].includes(value)) filters[type].push(value);
+            } else {
+                filters[type] = filters[type].filter(v => v !== value);
+            }
+        }
+
+        document.getElementById('timeValue').addEventListener('input', function() {
+            const val = parseInt(this.value);
+            const error = document.getElementById('timeError');
+            if (val > 60) {
+                error.style.display = 'block';
+                filters.time = null;
+            } else {
+                error.style.display = 'none';
+                filters.time = val || null;
+            }
+        });
+
+        document.getElementById('timeOperator').addEventListener('change', function() {
+            filters.timeOp = this.value;
+        });
+
+        document.getElementById('caloriesSlider').addEventListener('input', function() {
+            filters.calories = parseInt(this.value);
+            document.getElementById('caloriesValue').textContent = this.value + ' cal';
+        });
+
+        function toggleBMI() {
+            const section = document.getElementById('bmiSection');
+            filters.bmiEnabled = document.getElementById('enableBMI').checked;
+            section.classList.toggle('active', filters.bmiEnabled);
+        }
+
+        function calculateBMI() {
+            const height = parseFloat(document.getElementById('height').value);
+            const weight = parseFloat(document.getElementById('weight').value);
+            const age = parseInt(document.getElementById('age').value);
+            const gender = document.getElementById('gender').value;
+            const goal = document.querySelector('input[name="goal"]:checked').value;
+
+            if (!height || !weight || !age) {
+                alert('Please fill all BMI fields');
+                return;
+            }
+
+            const heightM = height / 100;
+            const bmi = weight / (heightM * heightM);
+            
+            let bmr;
+            if (gender === 'male') {
+                bmr = 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age);
+            } else {
+                bmr = 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age);
+            }
+
+            let dailyCal = bmr * 1.55;
+            if (goal === 'lose') dailyCal -= 500;
+            else if (goal === 'gain') dailyCal += 500;
+
+            filters.bmiData = { bmi: bmi.toFixed(1), dailyCal: Math.round(dailyCal), goal };
+
+            const result = document.getElementById('bmiResult');
+            let category = bmi < 18.5 ? 'Underweight' : bmi < 25 ? 'Normal' : bmi < 30 ? 'Overweight' : 'Obese';
+            result.innerHTML = `<strong>BMI: ${bmi.toFixed(1)} (${category})</strong><br>Daily Calories: ${Math.round(dailyCal)} kcal<br>Goal: ${goal.charAt(0).toUpperCase() + goal.slice(1)} weight`;
+            result.classList.add('active');
+        }
+
+        function clearAllFilters() {
+            filters = { mood: [], taste: [], meal: [], diet: [], time: null, timeOp: 'under', calories: 720, bmiEnabled: false, bmiData: null };
+            
+            document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+            document.getElementById('timeValue').value = '';
+            document.getElementById('timeOperator').value = 'under';
+            document.getElementById('caloriesSlider').value = 720;
+            document.getElementById('caloriesValue').textContent = '720 cal';
+            document.getElementById('enableBMI').checked = false;
+            document.getElementById('bmiSection').classList.remove('active');
+            document.getElementById('bmiResult').classList.remove('active');
+            document.getElementById('timeError').style.display = 'none';
+            
+            document.getElementById('filteredSection').style.display = 'none';
+            document.getElementById('banner').style.display = 'block';
+            
+            closeFilters();
+        }
+
+        function applyFilters() {
+            let filtered = [...recipes];
+
+            if (filters.mood.length > 0) {
+                filtered = filtered.filter(r => r.mood && r.mood.some(m => filters.mood.includes(m)));
+            }
+            if (filters.taste.length > 0) {
+                filtered = filtered.filter(r => r.taste && r.taste.some(t => filters.taste.includes(t)));
+            }
+            if (filters.meal.length > 0) {
+                filtered = filtered.filter(r => r.meal && r.meal.some(m => filters.meal.includes(m)));
+            }
+            if (filters.diet.length > 0) {
+                filtered = filtered.filter(r => filters.diet.includes(r.diet));
+            }
+            if (filters.time) {
+                if (filters.timeOp === 'under') filtered = filtered.filter(r => r.time <= filters.time);
+                else if (filters.timeOp === 'exactly') filtered = filtered.filter(r => r.time === filters.time);
+                else filtered = filtered.filter(r => r.time >= filters.time);
+            }
+            filtered = filtered.filter(r => r.calories <= filters.calories);
+            if (filters.bmiEnabled && filters.bmiData) {
+                filtered = filtered.filter(r => r.calories <= filters.bmiData.dailyCal);
+            }
+
+            if (filtered.length === 0) {
+                alert('No recipes match your filters. Try adjusting your criteria.');
+                return;
+            }
+
+            document.getElementById('banner').style.display = 'none';
+            document.getElementById('filteredSection').style.display = 'block';
+            document.querySelector('#filteredSection .section-title').textContent = '🎯 Based on Your Selected Filters';
+            document.getElementById('filteredGrid').innerHTML = filtered.map(createCard).join('');
+            closeFilters();
+            document.getElementById('filteredSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function loadQuickRecipes() {
+            const quick = recipes.slice(0, 6);
+            document.getElementById('quickGrid').innerHTML = quick.map(createCard).join('');
+        }
+
+        function loadFavorites() {
+            const grid = document.getElementById('favoritesGrid');
+            if (favorites.size === 0) {
+                grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #6b7280;"><div style="font-size: 64px;">💔</div><div style="font-size: 20px; font-weight: 600; margin: 10px 0;">No Favorites Yet</div><div>Start adding recipes!</div></div>`;
+                return;
+            }
+            const favs = recipes.filter(r => favorites.has(r.id));
+            grid.innerHTML = favs.map(createCard).join('');
+        }
+
+        function createCard(r) {
+            const isFav = favorites.has(r.id);
+            return `
+                <div class="recipe-card" onclick="openRecipeModal(${r.id})">
+                    <div class="recipe-image">${r.image}</div>
+                    <button class="favorite-btn" onclick="event.stopPropagation(); toggleFavorite(${r.id})">${isFav ? '❤️' : '🤍'}</button>
+                    <div class="recipe-content">
+                        <div class="recipe-title">${r.name}</div>
+                        <div class="recipe-meta">
+                            <span>⏱️ ${r.time}min</span>
+                            <span>🔥 ${r.calories}cal</span>
+                            <span>${r.diet === 'veg' ? '🥬 Veg' : '🍖 Non-Veg'}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function openRecipeModal(recipeId) {
+            const recipe = recipes.find(r => r.id === recipeId);
+            if (!recipe) return;
+
+            const recipeDetails = {
+                1: { ingredients: ["400g Spaghetti", "6 cloves Garlic", "100ml Olive oil", "Red pepper flakes"], steps: ["Boil salted water and cook spaghetti", "Heat olive oil and sauté garlic", "Toss pasta with garlic oil", "Season and serve hot"] },
+                2: { ingredients: ["800g Chicken", "200g Butter", "300ml Cream", "Tomato puree", "Garam masala"], steps: ["Marinate chicken with spices", "Cook until golden brown", "Add tomatoes and cream", "Simmer for 15 minutes and serve"] },
+                3: { ingredients: ["Bread", "Avocado", "Egg", "Tomatoes"], steps: ["Toast the bread", "Mash avocado with salt", "Cook egg to preference", "Assemble and serve"] },
+                4: { ingredients: ["Rice noodles", "Shrimp", "Peanuts", "Tamarind paste"], steps: ["Soak rice noodles", "Stir-fry shrimp", "Add noodles and sauce", "Garnish with peanuts"] },
+                5: { ingredients: ["Chocolate", "Butter", "Eggs", "Sugar", "Flour"], steps: ["Melt chocolate with butter", "Mix with eggs and sugar", "Add flour gently", "Bake for 12-14 minutes"] },
+                6: { ingredients: ["Chicken", "Lettuce", "Caesar dressing", "Croutons"], steps: ["Grill chicken breast", "Chop lettuce", "Toss with dressing", "Top with chicken and serve"] }
+            };
+
+            const details = recipeDetails[recipeId] || { ingredients: ["Details coming soon"], steps: ["Recipe will be added soon"] };
+
+            const modalHTML = `
+                <div style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 4000; align-items: center; justify-content: center; padding: 20px;" id="recipeModalOverlay" onclick="if(event.target.id==='recipeModalOverlay') closeRecipeModal()">
+                    <div style="background: white; border-radius: 25px; max-width: 900px; width: 90%; max-height: 90vh; overflow-y: auto;">
+                        <div style="position: relative; height: 250px; background: linear-gradient(135deg, #10b981 0%, #f59e0b 100%); display: flex; align-items: center; justify-content: center; font-size: 100px; border-radius: 25px 25px 0 0;">
+                            <button onclick="closeRecipeModal()" style="position: absolute; top: 20px; right: 20px; width: 40px; height: 40px; background: white; border: none; border-radius: 50%; font-size: 24px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">×</button>
+                            ${recipe.image}
+                        </div>
+                        <div style="padding: 30px;">
+                            <h1 style="font-size: 28px; font-weight: bold; color: #1f2937; margin-bottom: 15px;">${recipe.name}</h1>
+                            <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                                <span style="font-size: 14px; background: #f3f4f6; padding: 6px 12px; border-radius: 8px;">⏱️ ${recipe.time} min</span>
+                                <span style="font-size: 14px; background: #f3f4f6; padding: 6px 12px; border-radius: 8px;">🔥 ${recipe.calories} cal</span>
+                                <span style="font-size: 14px; background: #f3f4f6; padding: 6px 12px; border-radius: 8px;">${recipe.diet === 'veg' ? '🥬 Vegetarian' : '🍖 Non-Veg'}</span>
+                            </div>
+                            <button onclick="window.open('https://www.youtube.com/results?search_query=${encodeURIComponent(recipe.name + ' recipe')}','_blank')" style="background: #ef4444; color: white; padding: 12px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; margin-bottom: 25px;">▶️ Watch Tutorial on YouTube</button>
+                            <h2 style="font-size: 20px; font-weight: bold; color: #1f2937; margin: 25px 0 15px;">🛒 Ingredients</h2>
+                            <ul style="list-style: none; padding: 0;">
+                                ${details.ingredients.map(ing => `<li style="padding: 10px 0; border-bottom: 1px solid #f3f4f6;"><span style="color: #10b981; font-weight: bold; margin-right: 10px;">✓</span>${ing}</li>`).join('')}
+                            </ul>
+                            <h2 style="font-size: 20px; font-weight: bold; color: #1f2937; margin: 25px 0 15px;">👨‍🍳 Cooking Steps</h2>
+                            ${details.steps.map((step, i) => `
+                                <div style="display: flex; gap: 15px; margin-bottom: 20px; padding: 15px; background: #f9fafb; border-radius: 12px;">
+                                    <div style="width: 35px; height: 35px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;">${i + 1}</div>
+                                    <div style="flex: 1; color: #4b5563; line-height: 1.6;">${step}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        function closeRecipeModal() {
+            const modal = document.getElementById('recipeModalOverlay');
+            if (modal) modal.remove();
+        }
+
+        function toggleFavorite(id) {
+            if (favorites.has(id)) {
+                favorites.delete(id);
+            } else {
+                favorites.add(id);
+            }
+            localStorage.setItem(`favorites_${currentUser.userId}`, JSON.stringify([...favorites]));
+            localStorage.setItem('dishgenie_favorites', JSON.stringify([...favorites]));
+            loadQuickRecipes();
+            loadFavorites();
+            const filtered = document.getElementById('filteredGrid');
+            if (filtered.children.length > 0) {
+                const currentTitle = document.querySelector('#filteredSection .section-title').textContent;
+                if (currentTitle.includes('Search Results')) {
+                    const query = currentTitle.match(/"([^"]+)"/);
+                    if (query) performSearch(query[1]);
+                } else {
+                    applyFilters();
+                }
+            }
+        }
+
+        function syncFavoritesFromRecipePage() {
+            const recipeFavs = localStorage.getItem('dishgenie_favorites');
+            if (recipeFavs) {
+                const newFavs = new Set(JSON.parse(recipeFavs));
+                if (newFavs.size !== favorites.size || ![...newFavs].every(id => favorites.has(id))) {
+                    favorites = newFavs;
+                    localStorage.setItem(`favorites_${currentUser.userId}`, JSON.stringify([...favorites]));
+                    loadFavorites();
+                    loadQuickRecipes();
+                }
+            }
+        }
+
+        function checkPantryAlerts() {
+            const pantry = JSON.parse(localStorage.getItem('pantryItems') || '[]');
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const expiring = pantry.filter(item => {
+                if (!item.expiryDate) return false;
+                const expiry = new Date(item.expiryDate);
+                const diff = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+                return diff >= 0 && diff <= 4;
+            });
+
+            if (expiring.length > 0) {
+                const alert = document.getElementById('pantryAlert');
+                alert.classList.add('active');
+                document.getElementById('alertTitle').textContent = `⚠️ ${expiring.length} item${expiring.length > 1 ? 's' : ''} expiring soon!`;
+                const items = expiring.map(i => i.name).slice(0, 3).join(', ');
+                const more = expiring.length > 3 ? ` and ${expiring.length - 3} more` : '';
+                document.getElementById('alertText').textContent = `${items}${more} - Cook these recipes:`;
+                
+                const expiringNames = expiring.map(i => i.name.toLowerCase());
+                const suggested = recipes.filter(r => {
+                    const recipeName = r.name.toLowerCase();
+                    return expiringNames.some(exp => recipeName.includes(exp) || exp.includes(recipeName.split(' ')[0]));
+                }).slice(0, 5);
+                
+                document.getElementById('pantryRecipes').innerHTML = suggested.length > 0 
+                    ? suggested.map(r => `<button class="recipe-pill" onclick="openRecipeModal(${r.id})">${r.image} ${r.name}</button>`).join('') 
+                    : '<div style="color: #78350f;">No specific recipe suggestions available</div>';
+            }
+        }
+
+        function toggleVoice() {
+            if (!recognition) {
+                if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    recognition = new SpeechRecognition();
+                    recognition.continuous = false;
+                    recognition.lang = 'en-US';
+                    recognition.onresult = (e) => {
+                        const text = e.results[0][0].transcript;
+                        document.getElementById('searchInput').value = text;
+                        stopVoice();
+                        performSearch(text);
+                    };
+                    recognition.onerror = () => stopVoice();
+                    recognition.onend = () => stopVoice();
+                } else {
+                    alert('Speech recognition not supported');
+                    return;
+                }
+            }
+            
+            if (!isRecording) {
+                isRecording = true;
+                document.getElementById('micBtn').classList.add('recording');
+                document.getElementById('micBtn').innerHTML = '🔴';
+                recognition.start();
+            } else {
+                stopVoice();
+            }
+        }
+
+        function stopVoice() {
+            isRecording = false;
+            document.getElementById('micBtn').classList.remove('recording');
+            document.getElementById('micBtn').innerHTML = '🎤';
+            if (recognition) recognition.stop();
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.settings-container')) {
+                document.getElementById('settingsDropdown').classList.remove('active');
+            }
+            if (!e.target.closest('.search-container')) {
+                document.getElementById('searchSuggestions').style.display = 'none';
+            }
+            if (e.target.id === 'changeInfoModal') {
+                closeChangeInfo();
+            }
+            if (e.target.id === 'filterModal') {
+                closeFilters();
+            }
+        });
+    </script>
+</body>
+</html>

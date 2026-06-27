@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DishGenie - Recipes</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #e8f5e8 0%, #fff3e0 50%, #f0f4ff 100%); min-height: 100vh; }
+        .header { background: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 1000; }
+        .logo-image { width: 150px; height: auto; }
+        .header-buttons { display: flex; gap: 10px; align-items: center; }
+        .nav-btn { background: white; border: 2px solid #e5e7eb; border-radius: 10px; padding: 10px 20px; color: #6b7280; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.3s; text-decoration: none; }
+        .nav-btn:hover { background: #f3f4f6; border-color: #10b981; color: #10b981; }
+        .nav-btn.active { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border-color: #10b981; }
+        .logout-btn { background: #fee2e2; border: 2px solid #fecaca; border-radius: 10px; padding: 10px 20px; color: #dc2626; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.3s; }
+        .logout-btn:hover { background: #fecaca; }
+        .recipe-list-btn { position: fixed; bottom: 30px; right: 30px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: none; border-radius: 50%; width: 60px; height: 60px; color: white; cursor: pointer; font-size: 24px; box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4); z-index: 1500; transition: transform 0.3s; }
+        .recipe-list-btn:hover { transform: scale(1.1); }
+        .main-content { max-width: 1200px; margin: 0 auto; padding: 30px; }
+        .results-count { font-size: 18px; font-weight: bold; color: #1f2937; margin-bottom: 30px; }
+        .recipe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 30px; }
+        .recipe-card { background: white; border-radius: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.1); overflow: hidden; cursor: pointer; transition: transform 0.3s; position: relative; }
+        .recipe-card:hover { transform: translateY(-5px); }
+        .recipe-image { width: 100%; height: 200px; background: linear-gradient(135deg, #10b981 0%, #f59e0b 100%); display: flex; align-items: center; justify-content: center; font-size: 64px; }
+        .recipe-content { padding: 20px; }
+        .recipe-title { font-size: 20px; font-weight: bold; color: #1f2937; margin-bottom: 10px; }
+        .recipe-meta { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .meta-item { font-size: 14px; color: #6b7280; background: #f3f4f6; padding: 5px 10px; border-radius: 8px; }
+        .nutrition-preview { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
+        .nutrition-badge { font-size: 12px; color: #059669; background: #d1fae5; padding: 4px 8px; border-radius: 6px; font-weight: 600; }
+        .tag { padding: 4px 12px; border-radius: 15px; font-size: 12px; font-weight: 500; display: inline-block; margin-bottom: 10px; }
+        .tag-veg { background: #d1fae5; color: #065f46; }
+        .tag-nonveg { background: #fed7aa; color: #92400e; }
+        .view-recipe-btn { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 10px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; width: 100%; }
+        .favorite-btn { position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.9); border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 24px; cursor: pointer; z-index: 10; transition: transform 0.2s; }
+        .favorite-btn:hover { transform: scale(1.1); }
+        .side-panel { position: fixed; top: 0; right: -500px; width: 500px; height: 100vh; background: white; box-shadow: -5px 0 25px rgba(0,0,0,0.2); z-index: 2500; transition: right 0.4s; display: flex; flex-direction: column; }
+        .side-panel.active { right: 0; }
+        .panel-header { background: linear-gradient(135deg, #10b981 0%, #f59e0b 100%); color: white; padding: 25px; display: flex; justify-content: space-between; align-items: center; }
+        .panel-title { font-size: 24px; font-weight: bold; }
+        .panel-close { background: rgba(255,255,255,0.2); border: none; border-radius: 50%; width: 40px; height: 40px; color: white; font-size: 24px; cursor: pointer; }
+        .panel-tabs { display: flex; background: #f9fafb; border-bottom: 2px solid #e5e7eb; }
+        .panel-tab { flex: 1; padding: 15px; text-align: center; background: none; border: none; cursor: pointer; font-size: 16px; font-weight: 600; color: #6b7280; transition: all 0.3s; }
+        .panel-tab.active { color: #10b981; border-bottom: 3px solid #10b981; }
+        .panel-content { flex: 1; overflow-y: auto; padding: 20px; }
+        .recipe-list-item { display: flex; align-items: center; gap: 15px; padding: 15px; background: #f9fafb; border-radius: 12px; margin-bottom: 12px; cursor: pointer; transition: all 0.3s; }
+        .recipe-list-item:hover { background: #f3f4f6; transform: translateX(5px); }
+        .recipe-list-emoji { font-size: 36px; }
+        .recipe-list-info { flex: 1; }
+        .recipe-list-name { font-weight: 600; color: #1f2937; }
+        .recipe-list-meta { font-size: 12px; color: #6b7280; margin-top: 5px; }
+        .list-fav-btn { background: none; border: none; font-size: 20px; cursor: pointer; }
+        .empty-favorites { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-favorites-icon { font-size: 64px; margin-bottom: 20px; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 3000; overflow-y: auto; padding: 20px; }
+        .modal.active { display: flex; align-items: center; justify-content: center; }
+        .modal-content { background: white; border-radius: 25px; max-width: 900px; width: 100%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { position: relative; height: 300px; background: linear-gradient(135deg, #10b981 0%, #f59e0b 100%); display: flex; align-items: center; justify-content: center; font-size: 120px; }
+        .close-modal { position: absolute; top: 20px; right: 20px; width: 40px; height: 40px; background: white; border: none; border-radius: 50%; font-size: 24px; cursor: pointer; }
+        .modal-body { padding: 40px; }
+        .modal-title { font-size: 32px; font-weight: bold; color: #1f2937; margin-bottom: 15px; }
+        .modal-meta { display: flex; gap: 15px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 2px solid #f3f4f6; flex-wrap: wrap; }
+        .rating-section { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 2px solid #f3f4f6; }
+        .rating-display { display: flex; align-items: center; gap: 15px; margin-bottom: 10px; }
+        .stars { font-size: 24px; }
+        .star { cursor: pointer; transition: all 0.2s; }
+        .star.filled { color: #f59e0b; }
+        .star.empty { color: #d1d5db; }
+        .rating-text { font-size: 16px; color: #6b7280; }
+        .youtube-btn { background: #ef4444; color: white; padding: 12px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; margin-bottom: 30px; }
+        .youtube-btn:hover { background: #dc2626; }
+        .section-title { font-size: 24px; font-weight: bold; color: #1f2937; margin: 30px 0 20px; }
+        .nutrition-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; background: #f9fafb; padding: 20px; border-radius: 15px; margin-bottom: 30px; }
+        .nutrition-item { text-align: center; }
+        .nutrition-value { font-size: 24px; font-weight: bold; color: #10b981; }
+        .nutrition-label { font-size: 12px; color: #6b7280; margin-top: 5px; }
+        .ingredients-list { list-style: none; padding: 0; }
+        .ingredient-item { padding: 12px 0; border-bottom: 1px solid #f3f4f6; }
+        .ingredient-item:before { content: "✓"; color: #10b981; font-weight: bold; margin-right: 10px; }
+        .optional-section { margin-top: 20px; padding: 20px; background: #fef3c7; border-radius: 15px; }
+        .optional-title { font-size: 16px; font-weight: bold; color: #92400e; margin-bottom: 10px; }
+        .steps-list { list-style: none; padding: 0; }
+        .step-item { display: flex; gap: 20px; margin-bottom: 25px; padding: 20px; background: #f9fafb; border-radius: 15px; }
+        .step-number { width: 40px; height: 40px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; }
+        .step-text { flex: 1; color: #4b5563; line-height: 1.8; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <img src="DishGenie.png" alt="DishGenie" class="logo-image">
+        <div class="header-buttons">
+            <a href="dashboard.html" class="nav-btn">Home</a>
+            <a href="ingredients.html" class="nav-btn">Ingredients</a>
+            <a href="recipes.html" class="nav-btn active">Recipes</a>
+            <a href="pantry.html" class="nav-btn">Pantry</a>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </header>
+
+    <button class="recipe-list-btn" id="openPanel">📋</button>
+
+    <div class="side-panel" id="sidePanel">
+        <div class="panel-header">
+            <div class="panel-title">Recipe Collection</div>
+            <button class="panel-close" id="closePanel">✕</button>
+        </div>
+        <div class="panel-tabs">
+            <button class="panel-tab active" id="allTab">All Recipes (<span id="allCount">100</span>)</button>
+            <button class="panel-tab" id="favTab">Favorites (<span id="favCount">0</span>)</button>
+        </div>
+        <div class="panel-content" id="panelContent"></div>
+    </div>
+
+    <main class="main-content">
+        <div class="results-count" id="resultsCount">Showing 100 recipes</div>
+        <div class="recipe-grid" id="recipeGrid"></div>
+    </main>
+
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <div class="modal-header" id="modalHeader"></div>
+            <div class="modal-body" id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        // Complete 100 recipes database
+        const recipes = [
+            {id:1,name:"Spaghetti Aglio e Olio",image:"🍝",time:20,calories:420,protein:12,carbs:68,fat:14,diet:"veg",cuisine:"Italian",meal:"dinner",mood:"comfort",taste:"savory",bmi:"normal",ingredients:["400g Spaghetti","6 cloves Garlic (minced)","100ml Olive oil","Red pepper flakes"],optional:["Fresh parsley","Parmesan cheese","Lemon zest"],steps:["Bring a large pot of salted water to boil and cook spaghetti according to package directions until al dente","While pasta cooks, heat olive oil in a large pan over medium heat","Add minced garlic and red pepper flakes, sauté for 2-3 minutes until fragrant but not browned","Reserve 1 cup pasta water, then drain the spaghetti","Add drained pasta to the garlic oil, toss well, adding pasta water as needed for silky texture","Season with salt and pepper, garnish with parsley if desired, and serve immediately"]},
+            {id:2,name:"Butter Chicken",image:"🍛",time:50,calories:580,protein:45,carbs:32,fat:28,diet:"non-veg",cuisine:"Indian",meal:"dinner",mood:"comfort",taste:"spicy",bmi:"normal",ingredients:["800g Chicken breast (cubed)","200g Butter","300ml Heavy cream","400g Tomato puree","2 tbsp Garam masala","Ginger-garlic paste"],optional:["Kasuri methi","Fresh cream for garnish"],steps:["Marinate chicken pieces with yogurt, ginger-garlic paste, and half the garam masala for at least 30 minutes","Heat half the butter in a large pan and cook marinated chicken until golden brown on all sides","Remove chicken and set aside, in the same pan add remaining butter","Add tomato puree and cook for 5-6 minutes until oil separates","Add remaining garam masala, salt, and a pinch of sugar","Pour in the cream and bring to a gentle simmer","Add the cooked chicken back to the sauce and simmer for 10-15 minutes","Finish with a swirl of cream and serve hot with naan or rice"]},
+            {id:3,name:"Avocado Toast",image:"🥑",time:15,calories:320,protein:12,carbs:36,fat:18,diet:"veg",cuisine:"American",meal:"breakfast",mood:"energetic",taste:"savory",bmi:"low",ingredients:["2 slices Whole grain bread","1 ripe Avocado","1 Egg","Cherry tomatoes"],optional:["Everything bagel seasoning","Microgreens","Hot sauce"],steps:["Toast the bread slices until golden and crispy","While bread toasts, mash the ripe avocado in a bowl with salt, pepper, and a squeeze of lemon","Cook the egg to your preference (poached, fried, or scrambled)","Spread the mashed avocado generously on the toasted bread","Top with the cooked egg and halved cherry tomatoes","Season with additional salt, pepper, and optional toppings","Serve immediately while the toast is still warm"]},
+            {id:4,name:"Pad Thai",image:"🍜",time:30,calories:510,protein:28,carbs:62,fat:18,diet:"non-veg",cuisine:"Thai",meal:"lunch",mood:"adventurous",taste:"sweet-sour",bmi:"normal",ingredients:["200g Rice noodles","300g Shrimp (peeled)","100g Roasted peanuts (crushed)","3 tbsp Tamarind paste","2 tbsp Fish sauce","Bean sprouts","Eggs"],optional:["Lime wedges","Cilantro","Dried shrimp"],steps:["Soak rice noodles in warm water for 20 minutes until soft, then drain","Heat oil in a wok over high heat and scramble 2 eggs, set aside","In the same wok, stir-fry shrimp until pink and cooked through","Add softened noodles, tamarind paste, fish sauce, and palm sugar","Toss everything together for 2-3 minutes until well combined","Add bean sprouts and cooked egg, toss for another minute","Serve hot garnished with crushed peanuts, lime wedges, and fresh cilantro"]},
+            {id:5,name:"Chocolate Lava Cake",image:"🍰",time:25,calories:450,protein:8,carbs:54,fat:24,diet:"veg",cuisine:"French",meal:"dessert",mood:"indulgent",taste:"sweet",bmi:"normal",ingredients:["200g Dark chocolate","150g Butter","3 Eggs","100g Sugar","50g All-purpose flour"],optional:["Vanilla ice cream","Powdered sugar","Fresh berries"],steps:["Preheat oven to 200°C (400°F) and butter 4 ramekins","Melt dark chocolate and butter together in a double boiler, stirring until smooth","In a separate bowl, whisk eggs and sugar until thick and pale","Fold the melted chocolate mixture into the egg mixture gently","Sift in flour and fold until just combined, do not overmix","Divide batter among prepared ramekins, filling them 3/4 full","Bake for 12-14 minutes until edges are set but center is still soft","Let cool for 1 minute, then invert onto plates and serve immediately with ice cream"]},
+            {id:6,name:"Caesar Salad",image:"🥗",time:25,calories:380,protein:32,carbs:18,fat:22,diet:"non-veg",cuisine:"American",meal:"lunch",mood:"light",taste:"savory",bmi:"low",ingredients:["2 Chicken breasts","1 head Romaine lettuce","Caesar dressing","Croutons","Parmesan cheese"],optional:["Anchovies","Black pepper","Lemon wedges"],steps:["Season chicken breasts with salt, pepper, and Italian herbs","Grill or pan-fry chicken for 6-7 minutes per side until cooked through and juices run clear","Let chicken rest for 5 minutes, then slice into strips","Wash and chop romaine lettuce into bite-sized pieces","In a large bowl, toss lettuce with Caesar dressing until well coated","Add croutons and toss gently to combine","Top with sliced chicken and generous shavings of Parmesan cheese","Serve immediately with extra dressing on the side"]},
+            {id:7,name:"Veggie Stir Fry",image:"🥘",time:20,calories:250,protein:8,carbs:38,fat:9,diet:"veg",cuisine:"Chinese",meal:"dinner",mood:"healthy",taste:"savory",bmi:"low",ingredients:["Mixed vegetables (bell peppers, broccoli, carrots)","3 tbsp Soy sauce","2 tbsp Sesame oil","Ginger and garlic","Cornstarch slurry"],optional:["Cashews","Sesame seeds","Green onions"],steps:["Cut all vegetables into uniform bite-sized pieces for even cooking","Heat sesame oil in a wok or large pan over high heat until smoking","Add minced ginger and garlic, stir-fry for 30 seconds until fragrant","Add harder vegetables first (carrots, broccoli) and stir-fry for 3 minutes","Add softer vegetables (bell peppers) and continue stir-frying for 2 minutes","Pour in soy sauce and a splash of water, toss well","Add cornstarch slurry to thicken the sauce, toss for 1 minute","Serve hot over steamed rice, garnished with sesame seeds"]},
+            {id:8,name:"Margherita Pizza",image:"🍕",time:45,calories:520,protein:22,carbs:68,fat:18,diet:"veg",cuisine:"Italian",meal:"dinner",mood:"comfort",taste:"savory",bmi:"normal",ingredients:["Pizza dough","400g Tomato sauce","300g Fresh mozzarella","Fresh basil leaves","Olive oil"],optional:["Garlic powder","Oregano","Balsamic glaze"],steps:["Preheat oven to maximum temperature (250°C/480°F) with pizza stone if available","Roll out pizza dough on a floured surface to desired thickness","Transfer dough to a pizza peel or baking sheet dusted with cornmeal","Spread tomato sauce evenly over the dough, leaving a 1-inch border","Tear fresh mozzarella and distribute evenly over the sauce","Drizzle with olive oil and season with salt and pepper","Bake for 10-12 minutes until crust is golden and cheese is bubbly","Remove from oven, top with fresh basil leaves, and let cool for 2 minutes before slicing"]},
+            {id:9,name:"Salmon Teriyaki",image:"🐟",time:30,calories:420,protein:38,carbs:42,fat:12,diet:"non-veg",cuisine:"Japanese",meal:"dinner",mood:"healthy",taste:"sweet-savory",bmi:"low",ingredients:["2 Salmon fillets","100ml Teriyaki sauce","2 cups Cooked rice","Sesame seeds","Green onions"],optional:["Pickled ginger","Wasabi","Edamame"],steps:["Pat salmon fillets dry and season with salt and pepper","Marinate salmon in teriyaki sauce for 15 minutes at room temperature","Heat a non-stick pan over medium-high heat with a little oil","Place salmon skin-side down and cook for 4-5 minutes until skin is crispy","Flip carefully and cook for another 3-4 minutes, basting with teriyaki sauce","Remove from heat when salmon is cooked through but still moist inside","Serve over steamed rice, drizzle with remaining teriyaki sauce","Garnish with sesame seeds and sliced green onions"]},
+            {id:10,name:"Vegetable Biryani",image:"🍚",time:60,calories:450,protein:12,carbs:78,fat:12,diet:"veg",cuisine:"Indian",meal:"dinner",mood:"festive",taste:"spicy",bmi:"normal",ingredients:["2 cups Basmati rice","Mixed vegetables (carrots, peas, beans)","Biryani spices (cardamom, cloves, bay leaf)","2 Onions (fried)","Fresh coriander and mint"],optional:["Saffron milk","Fried cashews","Raisins"],steps:["Soak basmati rice for 30 minutes, then drain","Parboil rice with whole spices until 70% cooked, drain and set aside","In a heavy-bottomed pot, heat oil and sauté mixed vegetables with ginger-garlic paste","Add yogurt, biryani masala, salt, and cook vegetables until tender","Layer half the vegetables at the bottom of the pot","Add a layer of half the rice, then remaining vegetables, then remaining rice","Top with fried onions, fresh herbs, and saffron milk","Cover tightly and cook on low heat (dum) for 20 minutes","Let rest for 5 minutes, then gently mix and serve hot with raita"]},
+            {id:11,name:"Greek Salad",image:"🥗",time:15,calories:280,protein:8,carbs:18,fat:20,diet:"veg",cuisine:"Greek",meal:"lunch",mood:"light",taste:"tangy",bmi:"low",ingredients:["Tomatoes","Cucumber","200g Feta cheese","Kalamata olives","Red onion","Olive oil and lemon dressing"],optional:["Oregano","Capers","Green bell pepper"],steps:["Cut tomatoes and cucumber into bite-sized chunks","Slice red onion thinly and soak in cold water for 5 minutes to reduce sharpness","In a large bowl, combine tomatoes, cucumber, and drained onion","Add pitted Kalamata olives","Crumble feta cheese over the vegetables","Drizzle generously with olive oil and fresh lemon juice","Season with salt, pepper, and dried oregano","Toss gently and serve immediately at room temperature"]},
+            {id:12,name:"Beef Burger",image:"🍔",time:35,calories:720,protein:42,carbs:54,fat:36,diet:"non-veg",cuisine:"American",meal:"lunch",mood:"indulgent",taste:"savory",bmi:"high",ingredients:["500g Ground beef","Burger buns","Cheddar cheese slices","Lettuce, tomato, onion","Pickles"],optional:["Bacon","Special sauce","Jalapeños"],steps:["Divide ground beef into 4 equal portions and shape into patties, slightly larger than the buns","Season generously with salt and pepper on both sides","Preheat grill or pan to high heat","Cook patties for 4 minutes on first side without moving them","Flip and cook for 3-4 minutes more, adding cheese in the last minute to melt","Toast burger buns cut-side down on the grill for 1 minute","Assemble burgers: bottom bun, sauce, lettuce, patty with cheese, tomato, onion, pickles, top bun","Serve immediately with fries or a side salad"]},
+            {id:13,name:"Tom Yum Soup",image:"🍲",time:30,calories:180,protein:22,carbs:12,fat:6,diet:"non-veg",cuisine:"Thai",meal:"dinner",mood:"comforting",taste:"spicy-sour",bmi:"low",ingredients:["300g Shrimp (peeled)","4 cups Chicken stock","3 stalks Lemongrass (bruised)","Galangal slices","Kaffir lime leaves","Thai chilies","Fish sauce and lime juice"],optional:["Straw mushrooms","Cherry tomatoes","Cilantro"],steps:["Bring chicken stock to a boil in a large pot","Add lemongrass, galangal, and kaffir lime leaves, simmer for 5 minutes","Add Thai chilies (crushed) and mushrooms if using","Season with fish sauce to taste","Add shrimp and cherry tomatoes, cook for 3-4 minutes until shrimp turn pink","Remove from heat and add fresh lime juice","Taste and adjust seasoning with more fish sauce or lime as needed","Serve hot garnished with fresh cilantro"]},
+            {id:14,name:"Fluffy Pancakes",image:"🥞",time:20,calories:380,protein:12,carbs:58,fat:12,diet:"veg",cuisine:"American",meal:"breakfast",mood:"comforting",taste:"sweet",bmi:"normal",ingredients:["2 cups All-purpose flour","2 Eggs","300ml Milk","2 tbsp Melted butter","2 tbsp Sugar","Baking powder"],optional:["Maple syrup","Fresh berries","Whipped cream"],steps:["In a large bowl, whisk together flour, sugar, baking powder, and a pinch of salt","In another bowl, beat eggs and mix in milk and melted butter","Pour wet ingredients into dry ingredients and mix until just combined (batter should be slightly lumpy)","Heat a non-stick pan or griddle over medium heat and lightly grease","Pour 1/4 cup batter for each pancake onto the hot surface","Cook until bubbles form on surface and edges look set, about 2-3 minutes","Flip and cook for another 1-2 minutes until golden brown","Serve hot stacked with butter and maple syrup"]},
+            {id:15,name:"Chicken Tikka Masala",image:"🍛",time:55,calories:520,protein:48,carbs:28,fat:24,diet:"non-veg",cuisine:"Indian",meal:"dinner",mood:"comfort",taste:"spicy",bmi:"normal",ingredients:["800g Chicken thighs (cubed)","Tikka spices (cumin, coriander, paprika, turmeric)","300ml Heavy cream","Tomato-based curry sauce","Ginger-garlic paste","Yogurt for marinade"],optional:["Kasuri methi","Garam masala","Fresh cilantro"],steps:["Mix chicken with yogurt, tikka spices, and ginger-garlic paste, marinate for at least 2 hours","Thread marinated chicken onto skewers and grill or broil until charred and cooked through","In a large pan, heat oil and sauté onions until golden","Add ginger-garlic paste and tomato puree, cook until oil separates","Add remaining tikka spices and cook for 2 minutes","Pour in cream and bring to a gentle simmer","Add the grilled chicken pieces to the sauce","Simmer for 10-15 minutes, finish with kasuri methi and garam masala","Serve hot with naan bread or basmati rice"]},
+            {id:16,name:"Caprese Salad",image:"🍅",time:10,calories:260,protein:14,carbs:12,fat:18,diet:"veg",cuisine:"Italian",meal:"lunch",mood:"light",taste:"fresh",bmi:"low",ingredients:["4 large ripe Tomatoes","400g Fresh mozzarella","Fresh basil leaves","Extra virgin olive oil","Balsamic vinegar"],optional:["Sea salt flakes","Cracked black pepper","Balsamic glaze"],steps:["Slice tomatoes and mozzarella into 1/2-inch thick rounds","Arrange alternating slices of tomato and mozzarella on a serving platter","Tuck fresh basil leaves between the slices","Drizzle generously with high-quality extra virgin olive oil","Add a splash of balsamic vinegar","Season with sea salt and cracked black pepper","Let sit for 5 minutes before serving"]},
+            {id:17,name:"Tacos al Pastor",image:"🌮",time:40,calories:480,protein:32,carbs:45,fat:20,diet:"non-veg",cuisine:"Mexican",meal:"dinner",mood:"festive",taste:"spicy",bmi:"normal",ingredients:["600g Pork shoulder (thinly sliced)","Pineapple chunks","Corn tortillas","Achiote paste","Chipotle peppers","Onion and cilantro"],optional:["Lime wedges","Salsa verde","Radishes"],steps:["Marinate pork with achiote paste, chipotle, pineapple juice for 2 hours","Heat a large skillet over high heat","Cook marinated pork until caramelized and cooked through","Warm corn tortillas on the griddle","Chop cooked pork into small pieces","Fill tortillas with pork, grilled pineapple, diced onion, and cilantro","Serve with lime wedges and salsa"]},
+            {id:18,name:"Shakshuka",image:"🍳",time:30,calories:340,protein:18,carbs:28,fat:20,diet:"veg",cuisine:"Middle Eastern",meal:"breakfast",mood:"comforting",taste:"savory",bmi:"normal",ingredients:["6 Eggs","400g Crushed tomatoes","2 Bell peppers (diced)","1 Onion (diced)","Cumin and paprika","Feta cheese"],optional:["Fresh parsley","Crusty bread","Hot sauce"],steps:["Heat olive oil in a large skillet and sauté onions until soft","Add diced bell peppers and cook for 5 minutes","Add crushed tomatoes, cumin, paprika, salt, and pepper","Simmer sauce for 10 minutes until thickened","Make 6 wells in the sauce and crack an egg into each","Cover and cook until eggs are set to your liking","Crumble feta cheese over the top","Serve hot with crusty bread"]},
+            {id:19,name:"Beef Tacos",image:"🌮",time:25,calories:520,protein:35,carbs:42,fat:24,diet:"non-veg",cuisine:"Mexican",meal:"lunch",mood:"casual",taste:"savory",bmi:"normal",ingredients:["500g Ground beef","Taco seasoning","Taco shells","Lettuce and tomato","Cheddar cheese","Sour cream"],optional:["Jalapeños","Guacamole","Salsa"],steps:["Brown ground beef in a large skillet over medium-high heat","Drain excess fat and add taco seasoning with water","Simmer for 5 minutes until sauce thickens","Warm taco shells according to package directions","Fill shells with seasoned beef","Top with shredded lettuce, diced tomatoes, and cheese","Add sour cream and serve"]},
+            {id:20,name:"Mushroom Risotto",image:"🍄",time:45,calories:420,protein:14,carbs:68,fat:14,diet:"veg",cuisine:"Italian",meal:"dinner",mood:"elegant",taste:"creamy",bmi:"normal",ingredients:["300g Arborio rice","400g Mixed mushrooms","1L Vegetable stock (hot)","100ml White wine","Parmesan cheese","Butter"],optional:["Truffle oil","Fresh thyme","Extra parmesan"],steps:["Slice mushrooms and sauté in butter until golden, set aside","In the same pan, add more butter and sauté onions until translucent","Add arborio rice and toast for 2 minutes","Pour in white wine and stir until absorbed","Add hot stock one ladle at a time, stirring constantly","Continue adding stock until rice is creamy and al dente (about 18 minutes)","Stir in sautéed mushrooms, butter, and parmesan","Season and serve immediately"]},
+            {id:21,name:"Fish and Chips",image:"🐟",time:50,calories:680,protein:38,carbs:72,fat:28,diet:"non-veg",cuisine:"British",meal:"dinner",mood:"indulgent",taste:"savory",bmi:"high",ingredients:["4 Cod fillets","Potatoes for fries","Beer batter mix","Flour for coating","Vegetable oil for frying","Tartar sauce"],optional:["Malt vinegar","Mushy peas","Lemon wedges"],steps:["Cut potatoes into thick fries and soak in cold water","Heat oil to 180°C for frying","Prepare beer batter according to package or mix flour, beer, and seasoning","Pat fish dry and coat in flour, then dip in batter","Fry fish for 6-8 minutes until golden and crispy","Drain fries and fry at 180°C until golden","Serve fish and chips with tartar sauce"]},
+            {id:22,name:"Chicken Caesar Wrap",image:"🌯",time:20,calories:480,protein:36,carbs:42,fat:20,diet:"non-veg",cuisine:"American",meal:"lunch",mood:"casual",taste:"savory",bmi:"normal",ingredients:["2 Grilled chicken breasts","Large tortillas","Romaine lettuce","Caesar dressing","Parmesan cheese","Croutons"],optional:["Bacon bits","Cherry tomatoes","Avocado"],steps:["Slice grilled chicken into strips","Chop romaine lettuce into thin strips","Lay tortilla flat and spread caesar dressing","Layer lettuce, chicken, croutons, and parmesan","Drizzle with extra dressing","Fold in sides and roll tightly","Cut in half and serve"]},
+            {id:23,name:"Pho",image:"🍜",time:90,calories:420,protein:32,carbs:58,fat:8,diet:"non-veg",cuisine:"Vietnamese",meal:"lunch",mood:"comforting",taste:"savory",bmi:"normal",ingredients:["Rice noodles","500g Beef (thinly sliced)","Beef bone broth","Star anise, cinnamon, ginger","Bean sprouts","Fresh herbs (basil, cilantro, mint)"],optional:["Lime wedges","Sriracha","Hoisin sauce"],steps:["Simmer beef bones with star anise, cinnamon, and ginger for 2 hours","Strain broth and season with fish sauce and salt","Cook rice noodles according to package","Place noodles in bowls","Add raw beef slices to hot bowls","Pour boiling broth over to cook the beef","Top with bean sprouts and fresh herbs","Serve with lime, sriracha, and hoisin"]},
+            {id:24,name:"Falafel",image:"🧆",time:40,calories:380,protein:16,carbs:48,fat:16,diet:"veg",cuisine:"Middle Eastern",meal:"lunch",mood:"healthy",taste:"savory",bmi:"low",ingredients:["2 cups Chickpeas (soaked overnight)","Onion and garlic","Fresh parsley and cilantro","Cumin and coriander","Baking powder","Tahini sauce"],optional:["Pita bread","Pickled vegetables","Hot sauce"],steps:["Drain chickpeas and blend with onion, garlic, herbs, and spices","Add baking powder and mix well","Form mixture into small balls or patties","Heat oil to 180°C","Fry falafel for 3-4 minutes until golden brown","Drain on paper towels","Serve in pita with tahini sauce and vegetables"]},
+            {id:25,name:"Tiramisu",image:"🍰",time:30,calories:420,protein:8,carbs:48,fat:22,diet:"veg",cuisine:"Italian",meal:"dessert",mood:"elegant",taste:"sweet",bmi:"normal",ingredients:["6 Egg yolks","500g Mascarpone cheese","Ladyfinger cookies","Strong espresso","Cocoa powder","Sugar"],optional:["Amaretto liqueur","Dark chocolate shavings","Vanilla extract"],steps:["Whisk egg yolks with sugar until thick and pale","Fold in mascarpone cheese gently","Brew strong espresso and let cool slightly","Quickly dip ladyfingers in espresso","Layer dipped ladyfingers in a dish","Spread half the mascarpone mixture over ladyfingers","Repeat with another layer","Dust generously with cocoa powder","Refrigerate for 4 hours before serving"]},
+            {id:26,name:"Chicken Noodle Soup",image:"🍲",time:45,calories:280,protein:28,carbs:32,fat:6,diet:"non-veg",cuisine:"American",meal:"lunch",mood:"comforting",taste:"savory",bmi:"low",ingredients:["2 Chicken breasts","Egg noodles","Carrots and celery","Onion and garlic","Chicken broth","Fresh parsley"],optional:["Bay leaf","Thyme","Black pepper"],steps:["In a large pot, bring chicken broth to a boil","Add chicken breasts and simmer for 20 minutes","Remove chicken, shred, and set aside","In the same broth, add diced carrots, celery, and onion","Simmer for 10 minutes","Add egg noodles and cook until tender","Return shredded chicken to pot","Season with salt, pepper, and parsley"]},
+            {id:27,name:"Vegetable Curry",image:"🍛",time:40,calories:320,protein:10,carbs:52,fat:12,diet:"veg",cuisine:"Indian",meal:"dinner",mood:"comfort",taste:"spicy",bmi:"normal",ingredients:["Mixed vegetables (potatoes, cauliflower, peas)","400ml Coconut milk","Curry powder","Tomatoes","Onion and ginger-garlic paste","Fresh cilantro"],optional:["Cashews","Raisins","Garam masala"],steps:["Heat oil and sauté onions until golden","Add ginger-garlic paste and curry powder","Add chopped tomatoes and cook until soft","Add mixed vegetables and stir well","Pour in coconut milk and bring to simmer","Cover and cook for 20 minutes until vegetables are tender","Adjust seasoning","Garnish with cilantro and serve with rice"]},
+            {id:28,name:"BBQ Ribs",image:"🍖",time:180,calories:680,protein:42,carbs:38,fat:42,diet:"non-veg",cuisine:"American",meal:"dinner",mood:"indulgent",taste:"sweet-savory",bmi:"high",ingredients:["1kg Pork ribs","BBQ sauce","Dry rub (paprika, brown sugar, garlic powder)","Apple cider vinegar","Honey"],optional:["Coleslaw","Cornbread","Pickles"],steps:["Remove membrane from back of ribs","Apply dry rub generously on both sides","Let ribs sit for 30 minutes","Wrap ribs in foil and bake at 150°C for 2.5 hours","Unwrap and brush with BBQ sauce","Broil or grill for 10 minutes, basting with more sauce","Let rest for 10 minutes before cutting","Serve with extra BBQ sauce"]},
+            {id:29,name:"Quinoa Salad",image:"🥗",time:25,calories:320,protein:12,carbs:48,fat:10,diet:"veg",cuisine:"Mediterranean",meal:"lunch",mood:"healthy",taste:"fresh",bmi:"low",ingredients:["1 cup Quinoa","Cherry tomatoes","Cucumber","Feta cheese","Kalamata olives","Lemon vinaigrette"],optional:["Red onion","Fresh mint","Chickpeas"],steps:["Rinse quinoa and cook in 2 cups water for 15 minutes","Fluff quinoa and let cool","Halve cherry tomatoes and dice cucumber","In a large bowl, combine cooled quinoa and vegetables","Add crumbled feta and olives","Drizzle with lemon vinaigrette","Toss well and season with salt and pepper","Serve chilled or at room temperature"]},
+            {id:30,name:"Beef Stroganoff",image:"🍝",time:40,calories:580,protein:38,carbs:42,fat:28,diet:"non-veg",cuisine:"Russian",meal:"dinner",mood:"comfort",taste:"creamy",bmi:"normal",ingredients:["600g Beef strips","300g Mushrooms","200ml Sour cream","Beef broth","Egg noodles","Onion"],optional:["Dijon mustard","Fresh dill","Paprika"],steps:["Season beef strips with salt and pepper","Sear beef in hot pan until browned, remove and set aside","In same pan, sauté sliced mushrooms and onions","Add beef broth and simmer for 5 minutes","Return beef to pan","Stir in sour cream and heat gently","Cook egg noodles according to package","Serve stroganoff over noodles"]},
+            {id:31,name:"Chicken Fajitas",image:"🌮",time:30,calories:460,protein:38,carbs:42,fat:18,diet:"non-veg",cuisine:"Mexican",meal:"dinner",mood:"festive",taste:"savory",bmi:"normal",ingredients:["600g Chicken breast strips","Bell peppers (mixed colors)","Onion","Fajita seasoning","Flour tortillas","Lime"],optional:["Sour cream","Guacamole","Salsa"],steps:["Toss chicken with fajita seasoning","Heat skillet over high heat","Cook chicken until browned and cooked through","Remove chicken and sauté sliced peppers and onions","Return chicken to pan and toss together","Warm tortillas","Fill tortillas with chicken and vegetables","Serve with lime wedges and toppings"]},
+            {id:32,name:"Minestrone Soup",image:"🍲",time:50,calories:280,protein:12,carbs:48,fat:6,diet:"veg",cuisine:"Italian",meal:"lunch",mood:"comforting",taste:"savory",bmi:"low",ingredients:["Mixed beans (kidney, cannellini)","Pasta (small shells or ditalini)","Tomatoes","Carrots, celery, zucchini","Vegetable broth","Fresh basil"],optional:["Parmesan rind","Kale","Pesto"],steps:["Sauté diced carrots, celery, and onion in olive oil","Add garlic and tomato paste","Pour in vegetable broth and diced tomatoes","Add beans and simmer for 20 minutes","Add diced zucchini and pasta","Cook until pasta is tender","Stir in fresh basil","Serve with grated parmesan"]},
+            {id:33,name:"Shrimp Scampi",image:"🍤",time:20,calories:380,protein:32,carbs:28,fat:18,diet:"non-veg",cuisine:"Italian",meal:"dinner",mood:"elegant",taste:"savory",bmi:"low",ingredients:["500g Large shrimp (peeled)","Linguine pasta","Butter and olive oil","Garlic (minced)","White wine","Lemon juice and parsley"],optional:["Red pepper flakes","Parmesan","Extra lemon"],steps:["Cook linguine according to package directions","In a large pan, melt butter with olive oil","Add minced garlic and red pepper flakes","Add shrimp and cook for 2 minutes per side","Pour in white wine and lemon juice","Toss in cooked pasta","Add fresh parsley and toss well","Serve immediately with extra lemon"]},
+            {id:34,name:"Chicken Quesadilla",image:"🌮",time:15,calories:520,protein:32,carbs:42,fat:24,diet:"non-veg",cuisine:"Mexican",meal:"lunch",mood:"casual",taste:"savory",bmi:"normal",ingredients:["Cooked chicken (shredded)","Flour tortillas","Cheddar cheese","Bell peppers","Onions","Sour cream"],optional:["Jalapeños","Salsa","Guacamole"],steps:["Sauté diced peppers and onions until soft","Heat a large skillet over medium heat","Place one tortilla in pan","Sprinkle cheese, add chicken and vegetables","Top with more cheese and another tortilla","Cook for 3 minutes until bottom is golden","Flip and cook other side","Cut into wedges and serve with sour cream"]},
+            {id:35,name:"Ramen",image:"🍜",time:25,calories:480,protein:28,carbs:62,fat:14,diet:"non-veg",cuisine:"Japanese",meal:"dinner",mood:"comforting",taste:"savory",bmi:"normal",ingredients:["Ramen noodles","Pork belly or chicken","Soft boiled eggs","Nori seaweed","Green onions","Ramen broth (miso or tonkotsu)"],optional:["Bamboo shoots","Corn","Sesame seeds"],steps:["Prepare ramen broth according to recipe or package","Cook ramen noodles separately","Slice cooked pork or chicken thinly","Soft boil eggs for 6.5 minutes","Divide noodles into bowls","Pour hot broth over noodles","Top with pork, halved eggs, nori, and green onions","Serve immediately"]},
+            {id:36,name:"Eggplant Parmesan",image:"🍆",time:60,calories:520,protein:24,carbs:48,fat:26,diet:"veg",cuisine:"Italian",meal:"dinner",mood:"comfort",taste:"savory",bmi:"normal",ingredients:["2 large Eggplants","Marinara sauce","Mozzarella cheese","Parmesan cheese","Breadcrumbs","Eggs for coating"],optional:["Fresh basil","Ricotta cheese","Italian seasoning"],steps:["Slice eggplant into 1/2-inch rounds and salt to remove moisture","After 30 minutes, pat dry","Dip slices in egg, then breadcrumbs","Fry until golden on both sides","In a baking dish, layer marinara, eggplant, and cheeses","Repeat layers","Bake at 180°C for 30 minutes","Let rest for 10 minutes before serving"]},
+            {id:37,name:"French Onion Soup",image:"🍲",time:75,calories:380,protein:18,carbs:42,fat:16,diet:"veg",cuisine:"French",meal:"lunch",mood:"elegant",taste:"savory",bmi:"normal",ingredients:["4 large Onions (sliced)","Beef or vegetable broth","Gruyere cheese","French bread slices","Butter","White wine"],optional:["Thyme","Bay leaf","Sherry"],steps:["Slowly caramelize sliced onions in butter for 45 minutes","Add white wine and cook until evaporated","Pour in broth and simmer for 20 minutes","Toast bread slices","Ladle soup into oven-safe bowls","Top with bread and grated gruyere","Broil until cheese is melted and bubbly","Serve immediately"]},
+            {id:38,name:"Chicken Shawarma",image:"🥙",time:45,calories:480,protein:42,carbs:38,fat:18,diet:"non-veg",cuisine:"Middle Eastern",meal:"dinner",mood:"adventurous",taste:"spicy",bmi:"normal",ingredients:["800g Chicken thighs","Shawarma spices (cumin, paprika, turmeric)","Pita bread","Tahini sauce","Tomatoes and cucumber","Pickled vegetables"],optional:["Hummus","Hot sauce","Fresh parsley"],steps:["Marinate chicken with shawarma spices and yogurt for 2 hours","Grill or pan-fry chicken until cooked through","Slice chicken into strips","Warm pita bread","Spread tahini sauce on pita","Add chicken, vegetables, and pickles","Roll up tightly","Serve with extra tahini"]},
+            {id:39,name:"Apple Pie",image:"🥧",time:90,calories:420,protein:4,carbs:68,fat:18,diet:"veg",cuisine:"American",meal:"dessert",mood:"comforting",taste:"sweet",bmi:"normal",ingredients:["Pie crust (top and bottom)","6 Apples (sliced)","Sugar and cinnamon","Butter","Lemon juice","Flour for thickening"],optional:["Vanilla ice cream","Caramel sauce","Nutmeg"],steps:["Preheat oven to 190°C","Toss sliced apples with sugar, cinnamon, flour, and lemon juice","Roll out bottom crust and place in pie dish","Fill with apple mixture and dot with butter","Cover with top crust and cut vents","Brush with egg wash","Bake for 50-60 minutes until golden","Let cool before slicing"]},
+            {id:40,name:"Lasagna",image:"🍝",time:90,calories:620,protein:35,carbs:58,fat:28,diet:"non-veg",cuisine:"Italian",meal:"dinner",mood:"comfort",taste:"savory",bmi:"high",ingredients:["Lasagna noodles","500g Ground beef","Ricotta cheese","Mozzarella cheese","Parmesan cheese","Marinara sauce"],optional:["Italian sausage","Fresh basil","Béchamel sauce"],steps:["Brown ground beef with onions and garlic","Add marinara sauce and simmer","Cook lasagna noodles according to package","In a baking dish, layer sauce, noodles, ricotta, and mozzarella","Repeat layers 3 times","Top with mozzarella and parmesan","Cover with foil and bake at 180°C for 45 minutes","Uncover and bake 15 minutes more","Let rest 15 minutes before serving"]},
+            {id:41,name:"Chicken Fried Rice",image:"🍚",time:20,calories:420,protein:28,carbs:58,fat:12,diet:"non-veg",cuisine:"Chinese",meal:"dinner",mood:"casual",taste:"savory",bmi:"normal",ingredients:["3 cups Cooked rice (day-old)","Chicken breast (diced)","Eggs","Mixed vegetables (peas, carrots)","Soy sauce","Green onions"],optional:["Sesame oil","Ginger","Garlic"],steps:["Heat wok over high heat with oil","Scramble eggs and set aside","Cook diced chicken until done","Add vegetables and stir-fry for 2 minutes","Add cold rice and break up clumps","Pour in soy sauce and toss well","Add scrambled eggs back in","Garnish with green onions"]},
+            {id:42,name:"Lobster Roll",image:"🥖",time:30,calories:520,protein:32,carbs:42,fat:24,diet:"non-veg",cuisine:"American",meal:"lunch",mood:"indulgent",taste:"savory",bmi:"normal",ingredients:["2 Lobster tails (cooked)","Hot dog buns","Butter","Mayonnaise","Lemon juice","Celery (diced)"],optional:["Fresh dill","Old Bay seasoning","Lettuce"],steps:["Remove lobster meat from shells and chop","Mix lobster with mayo, lemon juice, and diced celery","Season with salt and pepper","Toast hot dog buns with butter","Fill buns with lobster mixture","Serve immediately with potato chips"]},
+            {id:43,name:"Vegetable Spring Rolls",image:"🥢",time:40,calories:280,protein:8,carbs:42,fat:10,diet:"veg",cuisine:"Chinese",meal:"lunch",mood:"light",taste:"savory",bmi:"low",ingredients:["Spring roll wrappers","Cabbage and carrots (shredded)","Bean sprouts","Rice noodles","Soy sauce","Ginger"],optional:["Peanut sauce","Cilantro","Mint leaves"],steps:["Soak rice noodles until soft","Stir-fry vegetables with ginger and soy sauce","Mix with cooled noodles","Soften spring roll wrapper in water","Place filling on wrapper","Fold in sides and roll tightly","Serve fresh or fried with peanut sauce"]},
+            {id:44,name:"Chicken Enchiladas",image:"🌮",time:45,calories:520,protein:38,carbs:48,fat:22,diet:"non-veg",cuisine:"Mexican",meal:"dinner",mood:"comfort",taste:"spicy",bmi:"normal",ingredients:["Cooked chicken (shredded)","Corn tortillas","Enchilada sauce","Cheddar cheese","Sour cream","Black beans"],optional:["Jalapeños","Cilantro","Avocado"],steps:["Mix shredded chicken with half the enchilada sauce","Warm tortillas to make them pliable","Fill each tortilla with chicken mixture and cheese","Roll up tightly and place seam-side down in baking dish","Pour remaining sauce over enchiladas","Top with more cheese","Bake at 180°C for 25 minutes","Serve with sour cream"]},
+            {id:45,name:"Beef Wellington",image:"🥩",time:120,calories:720,protein:48,carbs:38,fat:42,diet:"non-veg",cuisine:"British",meal:"dinner",mood:"elegant",taste:"savory",bmi:"high",ingredients:["Beef tenderloin","Puff pastry","Mushroom duxelles","Prosciutto","Egg wash","Dijon mustard"],optional:["Foie gras","Red wine sauce","Herbs"],steps:["Sear beef on all sides and cool","Brush with mustard","Spread mushroom duxelles on prosciutto slices","Wrap beef in prosciutto","Roll out puff pastry and wrap around beef","Brush with egg wash","Bake at 200°C for 40 minutes","Let rest 10 minutes before slicing"]},
+            {id:46,name:"Gazpacho",image:"🍅",time:20,calories:180,protein:4,carbs:28,fat:8,diet:"veg",cuisine:"Spanish",meal:"lunch",mood:"refreshing",taste:"tangy",bmi:"low",ingredients:["Ripe tomatoes","Cucumber","Bell pepper","Red onion","Garlic","Olive oil and vinegar"],optional:["Croutons","Fresh herbs","Tabasco"],steps:["Roughly chop all vegetables","Blend tomatoes, cucumber, pepper, onion, and garlic","Add olive oil and vinegar while blending","Season with salt and pepper","Chill for at least 2 hours","Blend again before serving","Serve cold with croutons"]},
+            {id:47,name:"Chicken Alfredo",image:"🍝",time:30,calories:680,protein:42,carbs:58,fat:32,diet:"non-veg",cuisine:"Italian",meal:"dinner",mood:"indulgent",taste:"creamy",bmi:"high",ingredients:["Fettuccine pasta","Chicken breast","Heavy cream","Butter","Parmesan cheese","Garlic"],optional:["Fresh parsley","Black pepper","Nutmeg"],steps:["Cook fettuccine according to package","Season and cook chicken breast, slice into strips","In same pan, melt butter and sauté garlic","Add heavy cream and bring to simmer","Stir in grated parmesan until melted","Toss pasta in sauce","Top with chicken slices","Garnish with parsley"]},
+            {id:48,name:"Banh Mi",image:"🥖",time:30,calories:480,protein:28,carbs:52,fat:18,diet:"non-veg",cuisine:"Vietnamese",meal:"lunch",mood:"adventurous",taste:"savory",bmi:"normal",ingredients:["Baguette","Pork (marinated and grilled)","Pickled carrots and daikon","Cucumber slices","Cilantro","Mayonnaise"],optional:["Pâté","Jalapeños","Soy sauce"],steps:["Marinate pork with lemongrass, garlic, and fish sauce","Grill pork until cooked through","Slice baguette lengthwise and toast","Spread mayo on bread","Layer pork, pickled vegetables, cucumber, and cilantro","Add jalapeños if desired","Serve immediately"]},
+            {id:49,name:"Clam Chowder",image:"🍲",time:50,calories:420,protein:22,carbs:38,fat:20,diet:"non-veg",cuisine:"American",meal:"lunch",mood:"comforting",taste:"creamy",bmi:"normal",ingredients:["Fresh clams","Potatoes (diced)","Heavy cream","Bacon","Onion and celery","Clam juice"],optional:["Thyme","Bay leaf","Oyster crackers"],steps:["Cook bacon until crispy, chop and set aside","In bacon fat, sauté onion and celery","Add diced potatoes and clam juice","Simmer until potatoes are tender","Add clams and cook until they open","Pour in cream and heat through","Add bacon back in","Serve with oyster crackers"]},
+            {id:50,name:"Chicken Satay",image:"🍢",time:40,calories:380,protein:32,carbs:28,fat:18,diet:"non-veg",cuisine:"Thai",meal:"dinner",mood:"festive",taste:"savory",bmi:"normal",ingredients:["Chicken breast (cubed)","Peanut sauce","Coconut milk","Curry powder","Bamboo skewers","Lime"],optional:["Cucumber salad","Crushed peanuts","Cilantro"],steps:["Marinate chicken in coconut milk and curry powder for 30 minutes","Thread chicken onto soaked bamboo skewers","Grill or broil for 12-15 minutes, turning occasionally","Prepare peanut sauce by mixing peanut butter, coconut milk, soy sauce, and lime","Brush satay with peanut sauce while cooking","Serve with extra peanut sauce for dipping"]},
+            {id:51,name:"Eggs Benedict",image:"🍳",time:30,calories:520,protein:28,carbs:32,fat:32,diet:"non-veg",cuisine:"American",meal:"breakfast",mood:"indulgent",taste:"savory",bmi:"high",ingredients:["English muffins","Eggs","Canadian bacon or ham","Hollandaise sauce","Butter","Lemon juice"],optional:["Chives","Smoked salmon","Avocado"],steps:["Toast English muffin halves","Cook Canadian bacon in a pan","Poach eggs in simmering water with vinegar","Prepare hollandaise: whisk egg yolks with lemon, slowly add melted butter","Place bacon on muffin halves","Top with poached egg","Spoon hollandaise over eggs","Garnish with chives"]},
+            {id:52,name:"Chicken Curry",image:"🍛",time:45,calories:480,protein:38,carbs:42,fat:20,diet:"non-veg",cuisine:"Indian",meal:"dinner",mood:"comfort",taste:"spicy",bmi:"normal",ingredients:["800g Chicken pieces","Curry spices (turmeric, cumin, coriander)","Coconut milk","Tomatoes","Onions and ginger-garlic paste","Fresh cilantro"],optional:["Green chilies","Curry leaves","Yogurt"],steps:["Marinate chicken with turmeric and salt","Sauté onions until golden","Add ginger-garlic paste and curry spices","Add tomatoes and cook until soft","Add chicken and cook for 10 minutes","Pour in coconut milk and simmer for 20 minutes","Garnish with cilantro","Serve with rice or naan"]},
+            {id:53,name:"Sushi Rolls",image:"🍣",time:60,calories:380,protein:22,carbs:62,fat:8,diet:"non-veg",cuisine:"Japanese",meal:"lunch",mood:"adventurous",taste:"savory",bmi:"low",ingredients:["Sushi rice","Nori sheets","Fresh fish (salmon, tuna)","Cucumber","Avocado","Soy sauce and wasabi"],optional:["Pickled ginger","Sesame seeds","Spicy mayo"],steps:["Cook sushi rice and season with rice vinegar","Let rice cool to room temperature","Place nori on bamboo mat","Spread rice evenly on nori","Add fish, cucumber, and avocado in a line","Roll tightly using the mat","Slice into 8 pieces with a wet knife","Serve with soy sauce and wasabi"]},
+            {id:54,name:"Beef Brisket",image:"🥩",time:360,calories:620,protein:48,carbs:28,fat:38,diet:"non-veg",cuisine:"American",meal:"dinner",mood:"indulgent",taste:"smoky",bmi:"high",ingredients:["2kg Beef brisket","BBQ rub","Apple cider vinegar","BBQ sauce","Liquid smoke","Brown sugar"],optional:["Coleslaw","Pickles","White bread"],steps:["Trim excess fat from brisket","Apply dry rub generously on all sides","Let sit for 1 hour at room temperature","Wrap in foil and place in roasting pan","Cook at 120°C for 6 hours","Unwrap and brush with BBQ sauce","Increase heat to 180°C and cook for 30 minutes","Let rest 30 minutes before slicing against the grain"]},
+            {id:55,name:"Caprese Pasta",image:"🍝",time:20,calories:480,protein:18,carbs:68,fat:16,diet:"veg",cuisine:"Italian",meal:"lunch",mood:"light",taste:"fresh",bmi:"normal",ingredients:["Pasta (penne or fusilli)","Cherry tomatoes","Fresh mozzarella balls","Fresh basil","Olive oil","Balsamic glaze"],optional:["Pine nuts","Garlic","Parmesan"],steps:["Cook pasta according to package directions","Halve cherry tomatoes","Cut mozzarella into bite-sized pieces","Drain pasta and toss with olive oil","Add tomatoes, mozzarella, and torn basil","Season with salt and pepper","Drizzle with balsamic glaze","Serve warm or at room temperature"]},
+            {id:56,name:"Crab Cakes",image:"🦀",time:30,calories:420,protein:28,carbs:32,fat:20,diet:"non-veg",cuisine:"American",meal:"lunch",mood:"elegant",taste:"savory",bmi:"normal",ingredients:["500g Lump crab meat","Breadcrumbs","Mayonnaise","Egg","Dijon mustard","Old Bay seasoning"],optional:["Lemon wedges","Tartar sauce","Fresh dill"],steps:["Mix crab meat with breadcrumbs, mayo, egg, mustard, and seasoning","Form into 6-8 patties","Refrigerate for 30 minutes to firm up","Heat oil in a pan over medium-high heat","Cook crab cakes for 4 minutes per side until golden","Drain on paper towels","Serve hot with tartar sauce and lemon"]},
+            {id:57,name:"Chicken Parmesan",image:"🍗",time:45,calories:620,protein:48,carbs:42,fat:28,diet:"non-veg",cuisine:"Italian",meal:"dinner",mood:"comfort",taste:"savory",bmi:"high",ingredients:["Chicken breasts","Marinara sauce","Mozzarella cheese","Parmesan cheese","Breadcrumbs","Eggs"],optional:["Fresh basil","Pasta","Italian seasoning"],steps:["Pound chicken breasts to even thickness","Dip in beaten egg, then breadcrumbs","Pan-fry until golden on both sides","Place in baking dish and top with marinara","Add mozzarella and parmesan","Bake at 180°C for 20 minutes","Serve over pasta with extra sauce"]},
+            {id:58,name:"Pumpkin Soup",image:"🎃",time:40,calories:280,protein:6,carbs:42,fat:12,diet:"veg",cuisine:"American",meal:"lunch",mood:"comforting",taste:"sweet",bmi:"low",ingredients:["Pumpkin puree","Vegetable broth","Heavy cream","Onion","Garlic","Nutmeg and cinnamon"],optional:["Pumpkin seeds","Croutons","Sage"],steps:["Sauté onion and garlic in butter","Add pumpkin puree and vegetable broth","Add spices and bring to simmer","Cook for 20 minutes","Blend until smooth","Stir in cream","Season with salt and pepper","Garnish with pumpkin seeds"]},
+            {id:59,name:"Lamb Kebabs",image:"🍢",time:40,calories:480,protein:38,carbs:28,fat:26,diet:"non-veg",cuisine:"Middle Eastern",meal:"dinner",mood:"festive",taste:"savory",bmi:"normal",ingredients:["700g Lamb (cubed)","Bell peppers and onions","Kebab spices (cumin, paprika, coriander)","Yogurt marinade","Bamboo skewers","Lemon"],optional:["Tzatziki sauce","Pita bread","Fresh mint"],steps:["Marinate lamb in yogurt and spices for 2 hours","Cut vegetables into chunks","Thread lamb and vegetables onto skewers","Preheat grill to high heat","Grill kebabs for 12-15 minutes, turning occasionally","Baste with marinade while cooking","Serve with tzatziki and pita"]},
+            {id:60,name:"Chocolate Chip Cookies",image:"🍪",time:25,calories:320,protein:4,carbs:42,fat:16,diet:"veg",cuisine:"American",meal:"dessert",mood:"comforting",taste:"sweet",bmi:"normal",ingredients:["2 cups All-purpose flour","1 cup Butter (softened)","Chocolate chips","2 Eggs","Brown sugar and white sugar","Vanilla extract"],optional:["Walnuts","Sea salt","Extra chocolate chips"],steps:["Cream together butter and sugars until fluffy","Beat in eggs and vanilla","Mix in flour and baking soda","Fold in chocolate chips","Chill dough for 30 minutes","Drop spoonfuls onto baking sheet","Bake at 180°C for 10-12 minutes","Cool on wire rack"]},
+            {id:61,name:"Pad See Ew",image:"🍜",time:25,calories:520,protein:28,carbs:68,fat:16,diet:"non-veg",cuisine:"Thai",meal:"dinner",mood:"casual",taste:"savory",bmi:"normal",ingredients:["Wide rice noodles","Chicken or beef strips","Chinese broccoli","Soy sauce","Oyster sauce","Eggs"],optional:["Thai basil","Chili flakes","Lime"],steps:["Soak rice noodles until soft","Heat wok over high heat with oil","Scramble eggs and set aside","Stir-fry meat until cooked","Add vegetables and stir-fry","Add noodles, soy sauce, and oyster sauce","Toss everything together","Add eggs back and serve"]},
+            {id:62,name:"Quiche Lorraine",image:"🥧",time:60,calories:480,protein:22,carbs:32,fat:30,diet:"non-veg",cuisine:"French",meal:"breakfast",mood:"elegant",taste:"savory",bmi:"high",ingredients:["Pie crust","Bacon","Eggs","Heavy cream","Gruyere cheese","Onion"],optional:["Nutmeg","Chives","Spinach"],steps:["Pre-bake pie crust at 180°C for 10 minutes","Cook bacon until crispy, chop","Sauté onion until soft","Whisk eggs with cream and season","Spread bacon and onion in crust","Pour egg mixture over","Top with grated cheese","Bake for 35-40 minutes until set"]},
+            {id:63,name:"Chicken Wings",image:"🍗",time:50,calories:580,protein:42,carbs:28,fat:36,diet:"non-veg",cuisine:"American",meal:"dinner",mood:"indulgent",taste:"spicy",bmi:"high",ingredients:["1kg Chicken wings","Buffalo sauce","Butter","Garlic powder","Celery sticks","Blue cheese dressing"],optional:["Ranch dressing","Carrot sticks","Hot sauce"],steps:["Pat wings dry and season with salt and pepper","Bake at 200°C for 40 minutes, flipping halfway","Melt butter and mix with buffalo sauce","Toss wings in sauce","Return to oven for 10 minutes","Serve with celery and blue cheese dressing"]},
+            {id:64,name:"Mushroom Soup",image:"🍄",time:35,calories:280,protein:8,carbs:28,fat:16,diet:"veg",cuisine:"French",meal:"lunch",mood:"comforting",taste:"creamy",bmi:"low",ingredients:["500g Mixed mushrooms","Heavy cream","Vegetable broth","Onion and garlic","Butter","Fresh thyme"],optional:["Truffle oil","Croutons","Parsley"],steps:["Sauté sliced mushrooms in butter until golden","Remove half for garnish","Add onion and garlic to pan","Pour in broth and simmer for 15 minutes","Blend until smooth","Stir in cream and heat through","Season with salt and pepper","Garnish with reserved mushrooms"]},
+            {id:65,name:"Beef Tacos al Carbon",image:"🌮",time:35,calories:520,protein:42,carbs:38,fat:24,diet:"non-veg",cuisine:"Mexican",meal:"dinner",mood:"festive",taste:"savory",bmi:"normal",ingredients:["800g Beef skirt steak","Corn tortillas","Lime","Cilantro","Onion","Salsa verde"],optional:["Avocado","Cotija cheese","Radishes"],steps:["Marinate beef with lime juice, garlic, and cumin","Grill beef over high heat for 4 minutes per side","Let rest 5 minutes, then slice against the grain","Warm tortillas on the grill","Fill with beef, onion, and cilantro","Squeeze lime over tacos","Serve with salsa verde"]},
+            {id:66,name:"Carbonara",image:"🍝",time:25,calories:680,protein:32,carbs:68,fat:32,diet:"non-veg",cuisine:"Italian",meal:"dinner",mood:"indulgent",taste:"creamy",bmi:"high",ingredients:["Spaghetti","Pancetta or bacon","Eggs","Parmesan cheese","Black pepper","Garlic"],optional:["Pecorino Romano","Fresh parsley","White wine"],steps:["Cook spaghetti in salted water","Fry pancetta until crispy","Beat eggs with grated parmesan","Drain pasta, reserving 1 cup pasta water","Toss hot pasta with pancetta and garlic","Remove from heat and quickly mix in egg mixture","Add pasta water to create creamy sauce","Season with lots of black pepper"]},
+            {id:67,name:"Chicken Soup",image:"🍲",time:60,calories:280,protein:28,carbs:28,fat:8,diet:"non-veg",cuisine:"American",meal:"lunch",mood:"comforting",taste:"savory",bmi:"low",ingredients:["Whole chicken or chicken pieces","Carrots and celery","Onion","Egg noodles","Fresh parsley","Bay leaf"],optional:["Thyme","Lemon","Ginger"],steps:["Place chicken in large pot with water","Add vegetables, bay leaf, salt, and pepper","Bring to boil, then simmer for 45 minutes","Remove chicken and shred meat","Strain broth and return to pot","Add noodles and cook until tender","Return chicken to pot","Garnish with parsley"]},
+            {id:68,name:"Vegetable Pad Thai",image:"🍜",time:25,calories:420,protein:12,carbs:68,fat:14,diet:"veg",cuisine:"Thai",meal:"lunch",mood:"healthy",taste:"sweet-sour",bmi:"normal",ingredients:["Rice noodles","Tofu","Mixed vegetables (bell peppers, carrots, sprouts)","Tamarind paste","Peanuts","Lime"],optional:["Cilantro","Green onions","Chili flakes"],steps:["Soak rice noodles in warm water","Press tofu and cut into cubes","Stir-fry tofu until golden","Add vegetables and stir-fry","Add noodles, tamarind paste, and soy sauce","Toss everything together","Top with crushed peanuts and lime","Serve hot"]},
+            {id:69,name:"Mac and Cheese",image:"🧀",time:30,calories:580,protein:24,carbs:62,fat:28,diet:"veg",cuisine:"American",meal:"dinner",mood:"comfort",taste:"creamy",bmi:"high",ingredients:["Macaroni pasta","Cheddar cheese","Milk","Butter","Flour","Breadcrumbs"],optional:["Bacon bits","Jalapeños","Panko"],steps:["Cook macaroni according to package","Make roux with butter and flour","Add milk and whisk until smooth","Stir in shredded cheddar until melted","Mix pasta with cheese sauce","Transfer to baking dish","Top with breadcrumbs and extra cheese","Bake at 180°C for 20 minutes"]},
+            {id:70,name:"Chicken Teriyaki Bowl",image:"🍚",time:30,calories:480,protein:38,carbs:62,fat:10,diet:"non-veg",cuisine:"Japanese",meal:"lunch",mood:"healthy",taste:"sweet-savory",bmi:"normal",ingredients:["Chicken breast","Teriyaki sauce","Steamed rice","Broccoli","Carrots","Sesame seeds"],optional:["Green onions","Edamame","Pickled ginger"],steps:["Slice chicken into strips","Marinate in teriyaki sauce for 15 minutes","Cook chicken in a pan until done","Steam broccoli and carrots","Prepare rice bowls with rice as base","Top with chicken and vegetables","Drizzle with extra teriyaki sauce","Garnish with sesame seeds"]},
+            {id:71,name:"Fish Tacos",image:"🌮",time:30,calories:420,protein:32,carbs:42,fat:16,diet:"non-veg",cuisine:"Mexican",meal:"lunch",mood:"light",taste:"fresh",bmi:"low",ingredients:["White fish fillets","Corn tortillas","Cabbage slaw","Lime crema","Avocado","Cilantro"],optional:["Pico de gallo","Hot sauce","Cotija cheese"],steps:["Season fish with cumin, chili powder, and lime","Grill or pan-fry fish for 4 minutes per side","Flake fish into chunks","Warm tortillas","Fill with fish, cabbage slaw, and avocado","Drizzle with lime crema","Top with cilantro","Serve with lime wedges"]},
+            {id:72,name:"Beef Pho",image:"🍜",time:90,calories:450,protein:35,carbs:58,fat:10,diet:"non-veg",cuisine:"Vietnamese",meal:"lunch",mood:"comforting",taste:"savory",bmi:"normal",ingredients:["Beef bones and meat","Rice noodles","Star anise and cinnamon","Fish sauce","Bean sprouts","Fresh herbs (basil, mint, cilantro)"],optional:["Lime wedges","Hoisin sauce","Sriracha"],steps:["Simmer beef bones with spices for 2 hours","Strain broth and season with fish sauce","Cook rice noodles separately","Thinly slice raw beef","Place noodles in bowls","Top with raw beef slices","Pour boiling broth over to cook beef","Add bean sprouts and fresh herbs"]},
+            {id:73,name:"Spinach Artichoke Dip",image:"🥙",time:30,calories:380,protein:14,carbs:22,fat:28,diet:"veg",cuisine:"American",meal:"snack",mood:"casual",taste:"creamy",bmi:"high",ingredients:["Spinach","Artichoke hearts","Cream cheese","Sour cream","Mozzarella cheese","Parmesan cheese"],optional:["Garlic","Tortilla chips","Bread bowl"],steps:["Thaw and drain spinach","Chop artichoke hearts","Mix cream cheese, sour cream, and cheeses","Fold in spinach and artichokes","Transfer to baking dish","Bake at 180°C for 25 minutes until bubbly","Serve hot with chips or bread"]},
+            {id:74,name:"Lamb Biryani",image:"🍚",time:90,calories:580,protein:38,carbs:72,fat:18,diet:"non-veg",cuisine:"Indian",meal:"dinner",mood:"festive",taste:"spicy",bmi:"normal",ingredients:["800g Lamb pieces","Basmati rice","Yogurt","Biryani spices","Fried onions","Saffron milk"],optional:["Raisins","Cashews","Hard boiled eggs"],steps:["Marinate lamb in yogurt and spices for 2 hours","Cook lamb until 70% done","Parboil rice with whole spices","Layer rice and lamb in a heavy pot","Top with fried onions and saffron milk","Cover tightly and cook on low (dum) for 30 minutes","Let rest 10 minutes","Gently mix and serve with raita"]},
+            {id:75,name:"Chicken Caesar Pizza",image:"🍕",time:35,calories:620,protein:35,carbs:68,fat:24,diet:"non-veg",cuisine:"Italian",meal:"dinner",mood:"creative",taste:"savory",bmi:"high",ingredients:["Pizza dough","Grilled chicken","Caesar dressing","Romaine lettuce","Parmesan cheese","Mozzarella cheese"],optional:["Bacon","Croutons","Black pepper"],steps:["Roll out pizza dough","Bake crust at 230°C for 8 minutes","Spread thin layer of caesar dressing on crust","Top with mozzarella and chicken","Bake for 10-12 minutes more","Remove from oven","Top with fresh chopped romaine","Sprinkle parmesan and serve"]},
+            {id:76,name:"Miso Soup",image:"🍲",time:15,calories:120,protein:8,carbs:12,fat:4,diet:"veg",cuisine:"Japanese",meal:"lunch",mood:"light",taste:"savory",bmi:"low",ingredients:["Miso paste","Dashi broth","Tofu (cubed)","Seaweed (wakame)","Green onions","Silken tofu"],optional:["Mushrooms","Spinach","Sesame oil"],steps:["Bring dashi broth to a simmer","Add cubed tofu and rehydrated seaweed","In a small bowl, mix miso paste with some hot broth","Add miso mixture to pot, stirring gently","Do not boil after adding miso","Add sliced green onions","Serve immediately in bowls"]},
+            {id:77,name:"Pulled Pork Sandwich",image:"🥪",time:420,calories:680,protein:45,carbs:58,fat:32,diet:"non-veg",cuisine:"American",meal:"lunch",mood:"indulgent",taste:"smoky",bmi:"high",ingredients:["Pork shoulder","BBQ rub","BBQ sauce","Burger buns","Coleslaw","Pickles"],optional:["Apple cider vinegar","Onion","Jalapeños"],steps:["Rub pork shoulder with BBQ spices","Wrap in foil and place in slow cooker","Cook on low for 8 hours until tender","Shred pork with two forks","Mix with BBQ sauce","Toast burger buns","Pile pulled pork on buns","Top with coleslaw and pickles"]},
+            {id:78,name:"Vegetable Lasagna",image:"🍝",time:75,calories:480,protein:24,carbs:58,fat:20,diet:"veg",cuisine:"Italian",meal:"dinner",mood:"comfort",taste:"savory",bmi:"normal",ingredients:["Lasagna noodles","Mixed vegetables (zucchini, spinach, mushrooms)","Ricotta cheese","Mozzarella cheese","Marinara sauce","Parmesan"],optional:["Béchamel sauce","Fresh basil","Italian herbs"],steps:["Sauté vegetables until tender","Cook lasagna noodles","Mix ricotta with egg and seasonings","Layer sauce, noodles, ricotta, vegetables","Repeat layers twice","Top with mozzarella and parmesan","Cover and bake at 180°C for 45 minutes","Uncover last 15 minutes for golden top"]},
+            {id:79,name:"Chicken Tortilla Soup",image:"🍲",time:40,calories:380,protein:32,carbs:38,fat:14,diet:"non-veg",cuisine:"Mexican",meal:"lunch",mood:"comforting",taste:"spicy",bmi:"normal",ingredients:["Chicken breast","Chicken broth","Black beans","Corn","Tomatoes","Tortilla strips"],optional:["Avocado","Lime","Cilantro"],steps:["Cook chicken in broth until done, shred","Add black beans, corn, and diced tomatoes","Add cumin, chili powder, and garlic","Simmer for 20 minutes","Fry or bake tortilla strips until crispy","Ladle soup into bowls","Top with tortilla strips, avocado, and lime","Garnish with cilantro"]},
+            {id:80,name:"Beef Chili",image:"🍲",time:90,calories:520,protein:38,carbs:48,fat:22,diet:"non-veg",cuisine:"American",meal:"dinner",mood:"comfort",taste:"spicy",bmi:"normal",ingredients:["Ground beef","Kidney beans","Tomatoes","Onions and peppers","Chili powder","Cumin"],optional:["Sour cream","Cheddar cheese","Jalapeños"],steps:["Brown ground beef with onions","Add peppers and garlic","Stir in chili powder, cumin, and paprika","Add tomatoes and kidney beans","Simmer for 60 minutes, stirring occasionally","Season with salt and pepper","Serve hot with toppings","Garnish with cheese and sour cream"]},
+            {id:81,name:"Shrimp Tacos",image:"🌮",time:25,calories:420,protein:28,carbs:42,fat:16,diet:"non-veg",cuisine:"Mexican",meal:"lunch",mood:"light",taste:"fresh",bmi:"low",ingredients:["Shrimp (peeled)","Corn tortillas","Cabbage slaw","Chipotle mayo","Lime","Cilantro"],optional:["Avocado","Pico de gallo","Cotija cheese"],steps:["Season shrimp with chili powder and cumin","Sauté shrimp for 2-3 minutes per side","Warm tortillas","Mix chipotle mayo","Fill tortillas with cabbage slaw","Top with shrimp","Drizzle with chipotle mayo","Garnish with lime and cilantro"]},
+            {id:82,name:"Chicken Marsala",image:"🍗",time:35,calories:480,protein:42,carbs:28,fat:22,diet:"non-veg",cuisine:"Italian",meal:"dinner",mood:"elegant",taste:"savory",bmi:"normal",ingredients:["Chicken breasts","Mushrooms","Marsala wine","Heavy cream","Butter","Flour"],optional:["Fresh parsley","Shallots","Thyme"],steps:["Pound chicken breasts thin and dredge in flour","Pan-fry chicken until golden, set aside","Sauté mushrooms in same pan","Add Marsala wine and reduce by half","Add cream and butter, stirring to combine","Return chicken to pan","Simmer for 5 minutes","Garnish with parsley"]},
+            {id:83,name:"Greek Chicken Bowl",image:"🥙",time:30,calories:480,protein:38,carbs:52,fat:16,diet:"non-veg",cuisine:"Greek",meal:"lunch",mood:"healthy",taste:"fresh",bmi:"normal",ingredients:["Chicken breast","Rice or quinoa","Cucumber and tomatoes","Feta cheese","Kalamata olives","Tzatziki sauce"],optional:["Red onion","Hummus","Pita bread"],steps:["Season and grill chicken","Cook rice or quinoa","Dice cucumber and tomatoes","Assemble bowls with rice as base","Top with sliced chicken","Add vegetables, feta, and olives","Drizzle with tzatziki","Serve with pita if desired"]},
+            {id:84,name:"Beef Stew",image:"🍲",time:120,calories:520,protein:42,carbs:48,fat:20,diet:"non-veg",cuisine:"American",meal:"dinner",mood:"comforting",taste:"savory",bmi:"normal",ingredients:["Beef chuck (cubed)","Potatoes and carrots","Onion and celery","Beef broth","Tomato paste","Bay leaf"],optional:["Red wine","Peas","Fresh herbs"],steps:["Brown beef cubes in batches","Sauté onion and celery","Add tomato paste and cook 2 minutes","Return beef to pot with broth and bay leaf","Simmer for 90 minutes","Add potatoes and carrots","Cook 30 minutes more until tender","Season and serve hot"]},
+            {id:85,name:"Chicken Pesto Pasta",image:"🍝",time:25,calories:580,protein:38,carbs:62,fat:22,diet:"non-veg",cuisine:"Italian",meal:"dinner",mood:"casual",taste:"savory",bmi:"normal",ingredients:["Pasta (penne or fusilli)","Chicken breast","Basil pesto","Cherry tomatoes","Parmesan cheese","Pine nuts"],optional:["Mozzarella","Garlic","Sun-dried tomatoes"],steps:["Cook pasta according to package","Season and cook chicken, slice into strips","Halve cherry tomatoes","Drain pasta and toss with pesto","Add chicken and tomatoes","Toss to combine","Top with parmesan and pine nuts","Serve immediately"]},
+            {id:86,name:"Breakfast Burrito",image:"🌯",time:20,calories:520,protein:28,carbs:48,fat:24,diet:"non-veg",cuisine:"Mexican",meal:"breakfast",mood:"energetic",taste:"savory",bmi:"normal",ingredients:["Large tortillas","Scrambled eggs","Bacon or sausage","Cheese","Hash browns","Salsa"],optional:["Avocado","Sour cream","Hot sauce"],steps:["Cook bacon or sausage","Scramble eggs with cheese","Cook hash browns until crispy","Warm tortilla","Layer eggs, meat, and hash browns","Add salsa and optional toppings","Fold in sides and roll tightly","Serve immediately or wrap in foil"]},
+            {id:87,name:"Chicken Fajita Bowl",image:"🥙",time:30,calories:480,protein:38,carbs:52,fat:16,diet:"non-veg",cuisine:"Mexican",meal:"lunch",mood:"healthy",taste:"savory",bmi:"normal",ingredients:["Chicken breast strips","Bell peppers and onions","Rice","Black beans","Fajita seasoning","Lime"],optional:["Guacamole","Sour cream","Cheese"],steps:["Cook rice","Season chicken with fajita spices","Sauté chicken until cooked","Add peppers and onions, cook until tender","Warm black beans","Assemble bowls with rice","Top with chicken and vegetables","Add beans and desired toppings"]},
+            {id:88,name:"Lemon Garlic Shrimp",image:"🍤",time:15,calories:320,protein:32,carbs:18,fat:14,diet:"non-veg",cuisine:"Mediterranean",meal:"dinner",mood:"light",taste:"fresh",bmi:"low",ingredients:["Large shrimp (peeled)","Garlic (minced)","Lemon juice","Butter","White wine","Fresh parsley"],optional:["Red pepper flakes","Pasta","Crusty bread"],steps:["Pat shrimp dry and season","Heat butter in pan over medium-high","Add garlic and cook 30 seconds","Add shrimp and cook 2 minutes per side","Pour in white wine and lemon juice","Simmer for 2 minutes","Garnish with parsley","Serve over pasta or with bread"]},
+            {id:89,name:"Vegetable Fried Rice",image:"🍚",time:20,calories:380,protein:10,carbs:68,fat:10,diet:"veg",cuisine:"Chinese",meal:"dinner",mood:"casual",taste:"savory",bmi:"normal",ingredients:["Day-old rice","Mixed vegetables (peas, carrots, corn)","Soy sauce","Sesame oil","Eggs","Green onions"],optional:["Ginger","Garlic","Cashews"],steps:["Heat wok over high heat","Scramble eggs and set aside","Add oil and stir-fry vegetables","Add cold rice and break up clumps","Pour in soy sauce and sesame oil","Toss everything together","Add eggs back in","Garnish with green onions"]},
+            {id:90,name:"Beef Bulgogi",image:"🥩",time:40,calories:480,protein:42,carbs:38,fat:20,diet:"non-veg",cuisine:"Korean",meal:"dinner",mood:"adventurous",taste:"sweet-savory",bmi:"normal",ingredients:["Beef sirloin (thinly sliced)","Soy sauce","Brown sugar","Sesame oil","Garlic and ginger","Green onions"],optional:["Kimchi","Lettuce wraps","Rice"],steps:["Marinate beef in soy sauce, sugar, sesame oil, garlic, and ginger for 30 minutes","Heat pan or grill to high heat","Cook beef in batches for 2-3 minutes per side","Don't overcrowd the pan","Garnish with green onions and sesame seeds","Serve with rice and kimchi","Can also serve in lettuce wraps"]},
+            {id:91,name:"Chicken Tacos",image:"🌮",time:25,calories:460,protein:35,carbs:42,fat:18,diet:"non-veg",cuisine:"Mexican",meal:"lunch",mood:"casual",taste:"savory",bmi:"normal",ingredients:["Chicken breast","Taco seasoning","Taco shells","Lettuce and tomato","Cheese","Sour cream"],optional:["Jalapeños","Guacamole","Salsa"],steps:["Cook chicken and shred or dice","Season with taco spices","Warm taco shells","Fill with seasoned chicken","Top with lettuce, tomato, and cheese","Add sour cream","Serve with optional toppings"]},
+            {id:92,name:"Paneer Tikka",image:"🧀",time:40,calories:420,protein:22,carbs:28,fat:26,diet:"veg",cuisine:"Indian",meal:"dinner",mood:"festive",taste:"spicy",bmi:"normal",ingredients:["Paneer (cubed)","Bell peppers and onions","Tikka marinade (yogurt, spices)","Ginger-garlic paste","Lemon juice","Butter"],optional:["Mint chutney","Naan bread","Onion rings"],steps:["Marinate paneer cubes in yogurt and tikka spices for 30 minutes","Cut vegetables into chunks","Thread paneer and vegetables onto skewers","Brush with butter","Grill or bake at 200°C for 20 minutes","Turn occasionally and baste with butter","Serve hot with mint chutney","Garnish with lemon wedges"]},
+            {id:93,name:"Beef Bolognese",image:"🍝",time:90,calories:580,protein:38,carbs:62,fat:22,diet:"non-veg",cuisine:"Italian",meal:"dinner",mood:"comfort",taste:"savory",bmi:"normal",ingredients:["Ground beef","Tomatoes (crushed)","Pasta (tagliatelle or spaghetti)","Onion, carrot, celery","Red wine","Parmesan cheese"],optional:["Heavy cream","Bay leaf","Fresh basil"],steps:["Sauté diced onion, carrot, and celery","Add ground beef and brown","Pour in red wine and let reduce","Add crushed tomatoes and simmer for 60 minutes","Stir occasionally and add water if needed","Cook pasta according to package","Toss pasta with bolognese sauce","Top with grated parmesan"]},
+            {id:94,name:"Chicken Stir Fry",image:"🥘",time:25,calories:420,protein:38,carbs:42,fat:14,diet:"non-veg",cuisine:"Chinese",meal:"dinner",mood:"healthy",taste:"savory",bmi:"normal",ingredients:["Chicken breast strips","Mixed vegetables (broccoli, peppers, snap peas)","Soy sauce","Ginger and garlic","Cornstarch","Rice"],optional:["Sesame seeds","Cashews","Oyster sauce"],steps:["Cook rice","Marinate chicken in soy sauce and cornstarch","Heat wok over high heat","Stir-fry chicken until cooked, remove","Stir-fry vegetables with ginger and garlic","Return chicken to wok","Add sauce and toss to coat","Serve over rice"]},
+            {id:95,name:"Caprese Sandwich",image:"🥪",time:15,calories:480,protein:22,carbs:52,fat:22,diet:"veg",cuisine:"Italian",meal:"lunch",mood:"light",taste:"fresh",bmi:"normal",ingredients:["Ciabatta bread","Fresh mozzarella","Tomatoes","Fresh basil","Balsamic glaze","Olive oil"],optional:["Pesto","Arugula","Balsamic vinegar"],steps:["Slice ciabatta bread horizontally","Drizzle inside with olive oil","Layer mozzarella slices","Add thick tomato slices","Add fresh basil leaves","Drizzle with balsamic glaze","Season with salt and pepper","Close sandwich and serve"]},
+            {id:96,name:"Chicken Biryani",image:"🍚",time:75,calories:580,protein:42,carbs:72,fat:18,diet:"non-veg",cuisine:"Indian",meal:"dinner",mood:"festive",taste:"spicy",bmi:"normal",ingredients:["Chicken pieces","Basmati rice","Yogurt","Biryani spices","Fried onions","Saffron milk"],optional:["Boiled eggs","Cashews","Raisins"],steps:["Marinate chicken in yogurt and spices for 1 hour","Cook chicken until 70% done","Parboil rice with whole spices","Layer chicken at bottom of pot","Add rice layer on top","Sprinkle fried onions and saffron milk","Cover tightly and cook on low (dum) for 25 minutes","Let rest 5 minutes before serving"]},
+            {id:97,name:"Vegetable Soup",image:"🍲",time:40,calories:220,protein:8,carbs:38,fat:6,diet:"veg",cuisine:"American",meal:"lunch",mood:"comforting",taste:"savory",bmi:"low",ingredients:["Mixed vegetables (carrots, celery, potatoes, green beans)","Vegetable broth","Tomatoes","Onion and garlic","Bay leaf","Fresh herbs"],optional:["Pasta","Beans","Parmesan rind"],steps:["Sauté diced onion and garlic","Add chopped vegetables","Pour in vegetable broth","Add diced tomatoes and bay leaf","Simmer for 30 minutes until vegetables are tender","Season with salt, pepper, and herbs","Remove bay leaf","Serve hot with crusty bread"]},
+            {id:98,name:"Chicken Gyros",image:"🥙",time:40,calories:520,protein:42,carbs:48,fat:20,diet:"non-veg",cuisine:"Greek",meal:"lunch",mood:"casual",taste:"savory",bmi:"normal",ingredients:["Chicken thighs","Pita bread","Tzatziki sauce","Tomatoes and onions","Lettuce","Greek seasoning"],optional:["Feta cheese","Olives","Cucumber"],steps:["Marinate chicken in Greek seasoning and lemon juice","Grill chicken until cooked through","Slice chicken into strips","Warm pita bread","Spread tzatziki on pita","Add chicken, tomatoes, onions, and lettuce","Add optional toppings","Wrap and serve"]},
+            {id:99,name:"Shrimp Pasta",image:"🍝",time:25,calories:520,protein:32,carbs:62,fat:18,diet:"non-veg",cuisine:"Italian",meal:"dinner",mood:"elegant",taste:"savory",bmi:"normal",ingredients:["Linguine or spaghetti","Large shrimp (peeled)","Garlic","White wine","Cherry tomatoes","Fresh parsley"],optional:["Red pepper flakes","Parmesan","Lemon zest"],steps:["Cook pasta according to package","Sauté garlic in olive oil","Add shrimp and cook 2 minutes per side","Add cherry tomatoes and white wine","Simmer until tomatoes soften","Toss pasta with shrimp mixture","Add fresh parsley","Serve immediately"]},
+            {id:100,name:"Vegetable Quesadilla",image:"🌮",time:20,calories:420,protein:18,carbs:48,fat:20,diet:"veg",cuisine:"Mexican",meal:"lunch",mood:"casual",taste:"savory",bmi:"normal",ingredients:["Flour tortillas","Mixed cheese (cheddar, monterey jack)","Bell peppers","Onions","Black beans","Corn"],optional:["Jalapeños","Sour cream","Guacamole"],steps:["Sauté peppers and onions until soft","Heat a large pan over medium heat","Place tortilla in pan","Sprinkle cheese on half the tortilla","Add vegetables, beans, and corn","Fold tortilla in half","Cook 2-3 minutes per side until golden","Cut into wedges and serve with toppings"]}
+        ];
+
+        let favorites = [];
+        let currentView = 'all';
+
+        // Load favorites from localStorage
+        function loadFavorites() {
+            const saved = localStorage.getItem('dishgenie_favorites');
+            if (saved) {
+                favorites = JSON.parse(saved);
+            }
+            updateFavCount();
+        }
+
+        // Save favorites to localStorage
+        function saveFavorites() {
+            localStorage.setItem('dishgenie_favorites', JSON.stringify(favorites));
+            updateFavCount();
+        }
+
+        // Update favorite count
+        function updateFavCount() {
+            document.getElementById('favCount').textContent = favorites.length;
+        }
+
+        // Toggle favorite
+        function toggleFavorite(recipeId) {
+            const index = favorites.indexOf(recipeId);
+            if (index > -1) {
+                favorites.splice(index, 1);
+            } else {
+                favorites.push(recipeId);
+            }
+            saveFavorites();
+            renderRecipes();
+            if (document.getElementById('sidePanel').classList.contains('active')) {
+                renderSidePanel();
+            }
+        }
+
+        // Render recipes in main grid
+        function renderRecipes() {
+            const grid = document.getElementById('recipeGrid');
+            grid.innerHTML = '';
+            
+            recipes.forEach(recipe => {
+                const isFavorite = favorites.includes(recipe.id);
+                const card = document.createElement('div');
+                card.className = 'recipe-card';
+                card.innerHTML = `
+                    <button class="favorite-btn" onclick="toggleFavorite(${recipe.id}); event.stopPropagation();">
+                        ${isFavorite ? '❤️' : '🤍'}
+                    </button>
+                    <div class="recipe-image">${recipe.image}</div>
+                    <div class="recipe-content">
+                        <div class="tag tag-${recipe.diet}">${recipe.diet === 'veg' ? 'Vegetarian' : 'Non-Veg'}</div>
+                        <div class="recipe-title">${recipe.name}</div>
+                        <div class="recipe-meta">
+                            <span class="meta-item">⏱️ ${recipe.time} min</span>
+                            <span class="meta-item">🔥 ${recipe.calories} cal</span>
+                        </div>
+                        <div class="nutrition-preview">
+                            <span class="nutrition-badge">💪 ${recipe.protein}g protein</span>
+                            <span class="nutrition-badge">🌾 ${recipe.carbs}g carbs</span>
+                            <span class="nutrition-badge">🥑 ${recipe.fat}g fat</span>
+                        </div>
+                        <button class="view-recipe-btn" onclick="openRecipeModal(${recipe.id}); event.stopPropagation();">View Recipe</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Render side panel
+        function renderSidePanel() {
+            const content = document.getElementById('panelContent');
+            const recipesToShow = currentView === 'all' ? recipes : recipes.filter(r => favorites.includes(r.id));
+            
+            if (currentView === 'favorites' && favorites.length === 0) {
+                content.innerHTML = `
+                    <div class="empty-favorites">
+                        <div class="empty-favorites-icon">💔</div>
+                        <div>No favorites yet! Start adding recipes you love.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            content.innerHTML = recipesToShow.map(recipe => {
+                const isFavorite = favorites.includes(recipe.id);
+                return `
+                    <div class="recipe-list-item" onclick="openRecipeModal(${recipe.id})">
+                        <div class="recipe-list-emoji">${recipe.image}</div>
+                        <div class="recipe-list-info">
+                            <div class="recipe-list-name">${recipe.name}</div>
+                            <div class="recipe-list-meta">${recipe.time} min • ${recipe.calories} cal • ${recipe.cuisine}</div>
+                        </div>
+                        <button class="list-fav-btn" onclick="toggleFavorite(${recipe.id}); event.stopPropagation();">
+                            ${isFavorite ? '❤️' : '🤍'}
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Open recipe modal
+        function openRecipeModal(recipeId) {
+            const recipe = recipes.find(r => r.id === recipeId);
+            if (!recipe) return;
+
+            const modal = document.getElementById('modal');
+            const header = document.getElementById('modalHeader');
+            const body = document.getElementById('modalBody');
+
+            // Get rating
+            const ratings = JSON.parse(localStorage.getItem('dishgenie_ratings') || '{}');
+            const rating = ratings[recipeId] || 0;
+
+            header.innerHTML = `
+                <button class="close-modal" onclick="closeModal()">✕</button>
+                ${recipe.image}
+            `;
+
+            body.innerHTML = `
+                <h1 class="modal-title">${recipe.name}</h1>
+                <div class="modal-meta">
+                    <span class="meta-item">⏱️ ${recipe.time} minutes</span>
+                    <span class="meta-item">🔥 ${recipe.calories} calories</span>
+                    <span class="meta-item">🍽️ ${recipe.cuisine}</span>
+                    <span class="meta-item tag tag-${recipe.diet}">${recipe.diet === 'veg' ? 'Vegetarian' : 'Non-Vegetarian'}</span>
+                </div>
+
+                <div class="rating-section">
+                    <div class="rating-display">
+                        <div class="stars" id="stars-${recipeId}">
+                            ${[1,2,3,4,5].map(i => `<span class="star ${i <= rating ? 'filled' : 'empty'}" onclick="rateRecipe(${recipeId}, ${i})">★</span>`).join('')}
+                        </div>
+                        <span class="rating-text">${rating > 0 ? `${rating}/5 stars` : 'Not rated yet'}</span>
+                    </div>
+                </div>
+
+                <button class="youtube-btn" onclick="window.open('https://www.youtube.com/results?search_query=${encodeURIComponent(recipe.name + ' recipe')}', '_blank')">
+                    ▶️ Watch Tutorial on YouTube
+                </button>
+
+                <h2 class="section-title">Nutritional Information</h2>
+                <div class="nutrition-grid">
+                    <div class="nutrition-item">
+                        <div class="nutrition-value">${recipe.calories}</div>
+                        <div class="nutrition-label">Calories</div>
+                    </div>
+                    <div class="nutrition-item">
+                        <div class="nutrition-value">${recipe.protein}g</div>
+                        <div class="nutrition-label">Protein</div>
+                    </div>
+                    <div class="nutrition-item">
+                        <div class="nutrition-value">${recipe.carbs}g</div>
+                        <div class="nutrition-label">Carbs</div>
+                    </div>
+                    <div class="nutrition-item">
+                        <div class="nutrition-value">${recipe.fat}g</div>
+                        <div class="nutrition-label">Fat</div>
+                    </div>
+                </div>
+
+                <h2 class="section-title">Main Ingredients</h2>
+                <ul class="ingredients-list">
+                    ${recipe.ingredients.map(ing => `<li class="ingredient-item">${ing}</li>`).join('')}
+                </ul>
+
+                ${recipe.optional && recipe.optional.length > 0 ? `
+                    <div class="optional-section">
+                        <div class="optional-title">Optional Ingredients</div>
+                        <ul class="ingredients-list">
+                            ${recipe.optional.map(ing => `<li class="ingredient-item">${ing}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+
+                <h2 class="section-title">Cooking Instructions</h2>
+                <ol class="steps-list">
+                    ${recipe.steps.map((step, i) => `
+                        <li class="step-item">
+                            <div class="step-number">${i + 1}</div>
+                            <div class="step-text">${step}</div>
+                        </li>
+                    `).join('')}
+                </ol>
+            `;
+
+            modal.classList.add('active');
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        // Rate recipe
+        function rateRecipe(recipeId, stars) {
+            const ratings = JSON.parse(localStorage.getItem('dishgenie_ratings') || '{}');
+            ratings[recipeId] = stars;
+            localStorage.setItem('dishgenie_ratings', JSON.stringify(ratings));
+            
+            // Update stars display
+            const starsContainer = document.getElementById(`stars-${recipeId}`);
+            if (starsContainer) {
+                starsContainer.innerHTML = [1,2,3,4,5].map(i => 
+                    `<span class="star ${i <= stars ? 'filled' : 'empty'}" onclick="rateRecipe(${recipeId}, ${i})">★</span>`
+                ).join('');
+                starsContainer.parentElement.querySelector('.rating-text').textContent = `${stars}/5 stars`;
+            }
+        }
+
+        // Panel controls
+        document.getElementById('openPanel').addEventListener('click', () => {
+            document.getElementById('sidePanel').classList.add('active');
+            renderSidePanel();
+        });
+
+        document.getElementById('closePanel').addEventListener('click', () => {
+            document.getElementById('sidePanel').classList.remove('active');
+        });
+
+        document.getElementById('allTab').addEventListener('click', () => {
+            currentView = 'all';
+            document.getElementById('allTab').classList.add('active');
+            document.getElementById('favTab').classList.remove('active');
+            renderSidePanel();
+        });
+
+        document.getElementById('favTab').addEventListener('click', () => {
+            currentView = 'favorites';
+            document.getElementById('favTab').classList.remove('active');
+            document.getElementById('allTab').classList.remove('active');
+            document.getElementById('favTab').classList.add('active');
+            renderSidePanel();
+        });
+
+        // Close modal when clicking outside
+        document.getElementById('modal').addEventListener('click', (e) => {
+            if (e.target.id === 'modal') {
+                closeModal();
+            }
+        });
+
+        // Logout function
+        function logout() {
+            window.location.href = 'login.html';
+        }
+
+        // Initialize
+        loadFavorites();
+        renderRecipes();
+    </script>
+</body>
+</html>

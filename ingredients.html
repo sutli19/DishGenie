@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DishGenie - Find Recipes by Ingredients</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #e8f5e8 0%, #fff3e0 50%, #f0f4ff 100%); min-height: 100vh; }
+        .header { background: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 1000; }
+        .logo-image { width: 150px; height: auto; }
+        .header-buttons { display: flex; gap: 10px; align-items: center; }
+        .nav-btn { background: white; border: 2px solid #e5e7eb; border-radius: 10px; padding: 10px 20px; color: #6b7280; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.3s; text-decoration: none; }
+        .nav-btn:hover { background: #f3f4f6; border-color: #10b981; color: #10b981; }
+        .nav-btn.active { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border-color: #10b981; }
+        .logout-btn { background: #fee2e2; border: 2px solid #fecaca; border-radius: 10px; padding: 10px 20px; color: #dc2626; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.3s; }
+        .logout-btn:hover { background: #fecaca; }
+        
+        .ingredient-list-btn { position: fixed; bottom: 30px; right: 30px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: none; border-radius: 50%; width: 60px; height: 60px; color: white; cursor: pointer; font-size: 24px; box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4); z-index: 1500; transition: transform 0.3s; }
+        .ingredient-list-btn:hover { transform: scale(1.1); }
+        
+        .side-panel { position: fixed; top: 0; right: -500px; width: 500px; height: 100vh; background: white; box-shadow: -5px 0 25px rgba(0,0,0,0.2); z-index: 2500; transition: right 0.4s; display: flex; flex-direction: column; }
+        .side-panel.active { right: 0; }
+        .panel-header { background: linear-gradient(135deg, #10b981 0%, #f59e0b 100%); color: white; padding: 25px; display: flex; justify-content: space-between; align-items: center; }
+        .panel-title { font-size: 24px; font-weight: bold; }
+        .panel-close { background: rgba(255,255,255,0.2); border: none; border-radius: 50%; width: 40px; height: 40px; color: white; font-size: 24px; cursor: pointer; }
+        .panel-search { padding: 20px; border-bottom: 2px solid #e5e7eb; }
+        .panel-search-input { width: 100%; padding: 12px 15px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 14px; outline: none; }
+        .panel-search-input:focus { border-color: #10b981; }
+        .panel-content { flex: 1; overflow-y: auto; padding: 20px; }
+        .ingredient-list-item { display: flex; align-items: center; justify-content: space-between; padding: 15px; background: #f9fafb; border-radius: 12px; margin-bottom: 12px; cursor: pointer; transition: all 0.3s; }
+        .ingredient-list-item:hover { background: #f3f4f6; transform: translateX(5px); }
+        .ingredient-list-item.selected { background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border: 2px solid #10b981; }
+        .ingredient-name { font-weight: 600; color: #1f2937; flex: 1; }
+        .ingredient-count { font-size: 12px; color: #6b7280; background: white; padding: 4px 8px; border-radius: 8px; margin-left: 10px; }
+        .select-indicator { font-size: 20px; }
+        
+        .search-section { max-width: 1200px; margin: 30px auto; padding: 0 30px; }
+        
+        .selected-ingredients { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 25px; min-height: 50px; }
+        .ingredient-chip { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 10px 15px; border-radius: 25px; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; animation: slideIn 0.3s; }
+        .remove-chip { background: rgba(255,255,255,0.3); border: none; color: white; width: 22px; height: 22px; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .remove-chip:hover { background: rgba(255,255,255,0.5); transform: scale(1.1); }
+        @keyframes slideIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        
+        .filters-section { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        .filters-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; margin-bottom: 15px; }
+        .filters-title { font-size: 18px; font-weight: bold; color: #1f2937; }
+        .filter-toggle { font-size: 20px; transition: transform 0.3s; }
+        .filter-toggle.active { transform: rotate(180deg); }
+        .filters-content { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .filters-content.collapsed { display: none; }
+        
+        .filter-group { display: flex; flex-direction: column; gap: 10px; }
+        .filter-label { font-size: 14px; font-weight: 600; color: #4b5563; }
+        .filter-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+        .filter-btn { padding: 8px 16px; border: 2px solid #e5e7eb; background: white; border-radius: 10px; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+        .filter-btn:hover { border-color: #10b981; }
+        .filter-btn.active { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border-color: #10b981; }
+        
+        .slider-container { display: flex; align-items: center; gap: 15px; }
+        .slider { flex: 1; height: 8px; border-radius: 5px; background: #e5e7eb; outline: none; -webkit-appearance: none; }
+        .slider::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: linear-gradient(135deg, #10b981 0%, #059669 100%); cursor: pointer; }
+        .slider::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: linear-gradient(135deg, #10b981 0%, #059669 100%); cursor: pointer; border: none; }
+        .slider-value { font-weight: 600; color: #10b981; min-width: 80px; }
+        
+        .select-dropdown { padding: 10px 15px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 14px; background: white; cursor: pointer; outline: none; }
+        .select-dropdown:focus { border-color: #10b981; }
+        
+        .results-section { max-width: 1200px; margin: 0 auto; padding: 0 30px 30px; }
+        .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .results-count { font-size: 18px; font-weight: bold; color: #1f2937; }
+        .clear-all-btn { background: #ef4444; color: white; padding: 10px 20px; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        .clear-all-btn:hover { background: #dc2626; transform: scale(1.05); }
+        
+        .empty-state { text-align: center; padding: 80px 20px; color: #6b7280; }
+        .empty-state-icon { font-size: 100px; margin-bottom: 20px; }
+        .empty-state-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; color: #1f2937; }
+        .empty-state-text { font-size: 16px; }
+        
+        .recipe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 30px; }
+        .recipe-card { background: white; border-radius: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.1); overflow: hidden; cursor: pointer; transition: transform 0.3s; position: relative; }
+        .recipe-card:hover { transform: translateY(-5px); }
+        .match-badge { position: absolute; top: 15px; left: 15px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 14px; z-index: 10; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); }
+        .recipe-image { width: 100%; height: 200px; background: linear-gradient(135deg, #10b981 0%, #f59e0b 100%); display: flex; align-items: center; justify-content: center; font-size: 64px; }
+        .recipe-content { padding: 20px; }
+        .recipe-title { font-size: 20px; font-weight: bold; color: #1f2937; margin-bottom: 10px; }
+        .recipe-meta { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .meta-item { font-size: 14px; color: #6b7280; background: #f3f4f6; padding: 5px 10px; border-radius: 8px; }
+        .nutrition-preview { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
+        .nutrition-badge { font-size: 12px; color: #059669; background: #d1fae5; padding: 4px 8px; border-radius: 6px; font-weight: 600; }
+        .tag { padding: 4px 12px; border-radius: 15px; font-size: 12px; font-weight: 500; display: inline-block; margin-bottom: 10px; }
+        .tag-veg { background: #d1fae5; color: #065f46; }
+        .tag-nonveg { background: #fed7aa; color: #92400e; }
+        
+        .ingredients-match { margin-top: 15px; padding-top: 15px; border-top: 2px solid #f3f4f6; }
+        .match-title { font-size: 13px; font-weight: 600; color: #6b7280; margin-bottom: 8px; }
+        .ingredient-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+        .ingredient-tag { padding: 4px 10px; border-radius: 10px; font-size: 12px; }
+        .ingredient-tag.matched { background: #d1fae5; color: #065f46; }
+        .ingredient-tag.missing { background: #fee2e2; color: #991b1b; }
+        
+        .view-recipe-btn { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 10px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 15px; }
+        .view-recipe-btn:hover { transform: scale(1.02); }
+        
+        .favorite-btn { position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.9); border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 24px; cursor: pointer; z-index: 10; transition: transform 0.2s; }
+        .favorite-btn:hover { transform: scale(1.1); }
+        
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 3000; overflow-y: auto; padding: 20px; }
+        .modal.active { display: flex; align-items: center; justify-content: center; }
+        .modal-content { background: white; border-radius: 25px; max-width: 900px; width: 100%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { position: relative; height: 300px; background: linear-gradient(135deg, #10b981 0%, #f59e0b 100%); display: flex; align-items: center; justify-content: center; font-size: 120px; }
+        .close-modal { position: absolute; top: 20px; right: 20px; width: 40px; height: 40px; background: white; border: none; border-radius: 50%; font-size: 24px; cursor: pointer; }
+        .modal-body { padding: 40px; }
+        .modal-title { font-size: 32px; font-weight: bold; color: #1f2937; margin-bottom: 15px; }
+        .modal-meta { display: flex; gap: 15px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 2px solid #f3f4f6; flex-wrap: wrap; }
+        .rating-section { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 2px solid #f3f4f6; }
+        .rating-display { display: flex; align-items: center; gap: 15px; margin-bottom: 10px; }
+        .stars { font-size: 24px; }
+        .star { cursor: pointer; transition: all 0.2s; }
+        .star.filled { color: #f59e0b; }
+        .star.empty { color: #d1d5db; }
+        .rating-text { font-size: 16px; color: #6b7280; }
+        .youtube-btn { background: #ef4444; color: white; padding: 12px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; margin-bottom: 30px; }
+        .youtube-btn:hover { background: #dc2626; }
+        .section-title { font-size: 24px; font-weight: bold; color: #1f2937; margin: 30px 0 20px; }
+        .nutrition-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; background: #f9fafb; padding: 20px; border-radius: 15px; margin-bottom: 30px; }
+        .nutrition-item { text-align: center; }
+        .nutrition-value { font-size: 24px; font-weight: bold; color: #10b981; }
+        .nutrition-label { font-size: 12px; color: #6b7280; margin-top: 5px; }
+        .ingredients-list { list-style: none; padding: 0; }
+        .ingredient-item { padding: 12px 0; border-bottom: 1px solid #f3f4f6; }
+        .ingredient-item:before { content: "✓"; color: #10b981; font-weight: bold; margin-right: 10px; }
+        .optional-section { margin-top: 20px; padding: 20px; background: #fef3c7; border-radius: 15px; }
+        .optional-title { font-size: 16px; font-weight: bold; color: #92400e; margin-bottom: 10px; }
+        .steps-list { list-style: none; padding: 0; }
+        .step-item { display: flex; gap: 20px; margin-bottom: 25px; padding: 20px; background: #f9fafb; border-radius: 15px; }
+        .step-number { width: 40px; height: 40px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; }
+        .search-bar-container { position: relative; margin-bottom: 25px; }
+        .main-search-input { width: 100%; padding: 15px 20px; border: 2px solid #e5e7eb; border-radius: 15px; font-size: 16px; outline: none; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: border-color 0.3s; }
+        .main-search-input:focus { border-color: #10b981; }
+        .search-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 2px solid #10b981; border-radius: 15px; margin-top: 10px; max-height: 400px; overflow-y: auto; box-shadow: 0 8px 25px rgba(0,0,0,0.15); z-index: 1000; display: none; }
+        .search-dropdown.active { display: block; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <img src="DishGenie.png" alt="DishGenie" class="logo-image">
+        <div class="header-buttons">
+            <a href="dashboard.html" class="nav-btn">Home</a>
+            <a href="ingredients.html" class="nav-btn active">Ingredients</a>
+            <a href="recipes.html" class="nav-btn">Recipes</a>
+            <a href="pantry.html" class="nav-btn">Pantry</a>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </header>
+
+    <button class="ingredient-list-btn" id="openPanel">📋</button>
+
+    <div class="side-panel" id="sidePanel">
+        <div class="panel-header">
+            <div class="panel-title">All Ingredients</div>
+            <button class="panel-close" id="closePanel">✕</button>
+        </div>
+        <div class="panel-search">
+            <input type="text" class="panel-search-input" id="panelSearchInput" placeholder="🔍 Search ingredients...">
+        </div>
+        <div class="panel-content" id="panelContent"></div>
+    </div>
+
+    <section class="search-section">
+        <div class="search-bar-container" style="margin-bottom: 25px;">
+            <input type="text" id="mainSearchInput" placeholder="🔍 Search ingredients (e.g., butter, chicken, tomatoes...)" 
+                   style="width: 100%; padding: 15px 20px; border: 2px solid #e5e7eb; border-radius: 15px; font-size: 16px; outline: none; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+            <div id="searchDropdown" style="display: none; position: relative; background: white; border: 2px solid #10b981; border-radius: 15px; margin-top: 10px; max-height: 300px; overflow-y: auto; box-shadow: 0 8px 25px rgba(0,0,0,0.15); z-index: 100;"></div>
+        </div>
+
+        <div class="selected-ingredients" id="selectedIngredients"></div>
+        
+        <div class="filters-section">
+            <div class="filters-header" onclick="toggleFilters()">
+                <div class="filters-title">🎛️ Filters & Options</div>
+                <div class="filter-toggle" id="filterToggle">🔽</div>
+            </div>
+            <div class="filters-content" id="filtersContent">
+                <div class="filter-group">
+                    <div class="filter-label">Diet Type</div>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-diet="all" onclick="setDietFilter('all')">All</button>
+                        <button class="filter-btn" data-diet="veg" onclick="setDietFilter('veg')">🥬 Veg</button>
+                        <button class="filter-btn" data-diet="non-veg" onclick="setDietFilter('non-veg')">🍖 Non-Veg</button>
+                    </div>
+                </div>
+                
+                <div class="filter-group">
+                    <div class="filter-label">Cooking Time</div>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-time="all" onclick="setTimeFilter('all')">All</button>
+                        <button class="filter-btn" data-time="quick" onclick="setTimeFilter('quick')">⚡ Quick (0-30min)</button>
+                        <button class="filter-btn" data-time="medium" onclick="setTimeFilter('medium')">⏱️ Medium (30-60min)</button>
+                        <button class="filter-btn" data-time="long" onclick="setTimeFilter('long')">🕐 Long (60+ min)</button>
+                    </div>
+                </div>
+                
+                <div class="filter-group">
+                    <div class="filter-label">Max Calories</div>
+                    <div class="slider-container">
+                        <input type="range" min="0" max="720" value="720" class="slider" id="caloriesSlider" oninput="updateCalories()">
+                        <div class="slider-value" id="caloriesValue">720 cal</div>
+                    </div>
+                </div>
+                
+                <div class="filter-group">
+                    <div class="filter-label">Sort By</div>
+                    <select class="select-dropdown" id="sortBy" onchange="applyFilters()">
+                        <option value="match">Best Match</option>
+                        <option value="time">Cooking Time</option>
+                        <option value="calories">Calories</option>
+                        <option value="name">Name (A-Z)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="results-section">
+        <div class="results-header">
+            <div class="results-count" id="resultsCount"></div>
+            <button class="clear-all-btn" id="clearAllBtn" onclick="clearAll()" style="display: none;">Clear All</button>
+        </div>
+        <div class="recipe-grid" id="recipeGrid"></div>
+        <div class="empty-state" id="emptyState">
+            <div class="empty-state-icon">🍳</div>
+            <div class="empty-state-title">Start by Adding Ingredients!</div>
+            <div class="empty-state-text">Click the 📋 button to browse and select ingredients</div>
+        </div>
+    </section>
+
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <div class="modal-header" id="modalHeader"></div>
+            <div class="modal-body" id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        const recipes = [
+            {id:1,name:"Spaghetti Aglio e Olio",image:"🍝",time:20,calories:420,protein:12,carbs:68,fat:14,diet:"veg",cuisine:"Italian",ingredients:["Spaghetti","Garlic","Olive oil","Red pepper flakes"],optional:["Fresh parsley","Parmesan cheese","Lemon zest"],steps:["Bring a large pot of salted water to boil and cook spaghetti according to package directions until al dente","While pasta cooks, heat olive oil in a large pan over medium heat","Add minced garlic and red pepper flakes, sauté for 2-3 minutes until fragrant but not browned","Reserve 1 cup pasta water, then drain the spaghetti","Add drained pasta to the garlic oil, toss well, adding pasta water as needed for silky texture","Season with salt and pepper, garnish with parsley if desired, and serve immediately"]},
+            {id:2,name:"Butter Chicken",image:"🍛",time:50,calories:580,protein:45,carbs:32,fat:28,diet:"non-veg",cuisine:"Indian",ingredients:["Chicken breast","Butter","Heavy cream","Tomato puree","Garam masala","Ginger-garlic paste"],optional:["Kasuri methi","Fresh cream for garnish"],steps:["Marinate chicken pieces with yogurt, ginger-garlic paste, and half the garam masala for at least 30 minutes","Heat half the butter in a large pan and cook marinated chicken until golden brown on all sides","Remove chicken and set aside, in the same pan add remaining butter","Add tomato puree and cook for 5-6 minutes until oil separates","Add remaining garam masala, salt, and a pinch of sugar","Pour in the cream and bring to a gentle simmer","Add the cooked chicken back to the sauce and simmer for 10-15 minutes","Finish with a swirl of cream and serve hot with naan or rice"]},
+            {id:3,name:"Avocado Toast",image:"🥑",time:15,calories:320,protein:12,carbs:36,fat:18,diet:"veg",cuisine:"American",ingredients:["Whole grain bread","Avocado","Egg","Cherry tomatoes"],optional:["Everything bagel seasoning","Microgreens","Hot sauce"],steps:["Toast the bread slices until golden and crispy","While bread toasts, mash the ripe avocado in a bowl with salt, pepper, and a squeeze of lemon","Cook the egg to your preference (poached, fried, or scrambled)","Spread the mashed avocado generously on the toasted bread","Top with the cooked egg and halved cherry tomatoes","Season with additional salt, pepper, and optional toppings","Serve immediately while the toast is still warm"]},
+            {id:4,name:"Pad Thai",image:"🍜",time:30,calories:510,protein:28,carbs:62,fat:18,diet:"non-veg",cuisine:"Thai",ingredients:["Rice noodles","Shrimp","Roasted peanuts","Tamarind paste","Fish sauce","Bean sprouts","Eggs"],optional:["Lime wedges","Cilantro","Dried shrimp"],steps:["Soak rice noodles in warm water for 20 minutes until soft, then drain","Heat oil in a wok over high heat and scramble 2 eggs, set aside","In the same wok, stir-fry shrimp until pink and cooked through","Add softened noodles, tamarind paste, fish sauce, and palm sugar","Toss everything together for 2-3 minutes until well combined","Add bean sprouts and cooked egg, toss for another minute","Serve hot garnished with crushed peanuts, lime wedges, and fresh cilantro"]},
+            {id:5,name:"Chocolate Lava Cake",image:"🍰",time:25,calories:450,protein:8,carbs:54,fat:24,diet:"veg",cuisine:"French",ingredients:["Dark chocolate","Butter","Eggs","Sugar","All-purpose flour"],optional:["Vanilla ice cream","Powdered sugar","Fresh berries"],steps:["Preheat oven to 200°C (400°F) and butter 4 ramekins","Melt dark chocolate and butter together in a double boiler, stirring until smooth","In a separate bowl, whisk eggs and sugar until thick and pale","Fold the melted chocolate mixture into the egg mixture gently","Sift in flour and fold until just combined, do not overmix","Divide batter among prepared ramekins, filling them 3/4 full","Bake for 12-14 minutes until edges are set but center is still soft","Let cool for 1 minute, then invert onto plates and serve immediately with ice cream"]},
+            {id:6,name:"Caesar Salad",image:"🥗",time:25,calories:380,protein:32,carbs:18,fat:22,diet:"non-veg",cuisine:"American",ingredients:["Chicken breasts","Romaine lettuce","Caesar dressing","Croutons","Parmesan cheese"],optional:["Anchovies","Black pepper","Lemon wedges"],steps:["Season chicken breasts with salt, pepper, and Italian herbs","Grill or pan-fry chicken for 6-7 minutes per side until cooked through and juices run clear","Let chicken rest for 5 minutes, then slice into strips","Wash and chop romaine lettuce into bite-sized pieces","In a large bowl, toss lettuce with Caesar dressing until well coated","Add croutons and toss gently to combine","Top with sliced chicken and generous shavings of Parmesan cheese","Serve immediately with extra dressing on the side"]},
+            {id:7,name:"Veggie Stir Fry",image:"🥘",time:20,calories:250,protein:8,carbs:38,fat:9,diet:"veg",cuisine:"Chinese",ingredients:["Mixed vegetables","Soy sauce","Sesame oil","Ginger","Garlic","Cornstarch"],optional:["Cashews","Sesame seeds","Green onions"],steps:["Cut all vegetables into uniform bite-sized pieces for even cooking","Heat sesame oil in a wok or large pan over high heat until smoking","Add minced ginger and garlic, stir-fry for 30 seconds until fragrant","Add harder vegetables first (carrots, broccoli) and stir-fry for 3 minutes","Add softer vegetables (bell peppers) and continue stir-frying for 2 minutes","Pour in soy sauce and a splash of water, toss well","Add cornstarch slurry to thicken the sauce, toss for 1 minute","Serve hot over steamed rice, garnished with sesame seeds"]},
+            {id:8,name:"Margherita Pizza",image:"🍕",time:45,calories:520,protein:22,carbs:68,fat:18,diet:"veg",cuisine:"Italian",ingredients:["Pizza dough","Tomato sauce","Fresh mozzarella","Fresh basil","Olive oil"],optional:["Garlic powder","Oregano","Balsamic glaze"],steps:["Preheat oven to maximum temperature (250°C/480°F) with pizza stone if available","Roll out pizza dough on a floured surface to desired thickness","Transfer dough to a pizza peel or baking sheet dusted with cornmeal","Spread tomato sauce evenly over the dough, leaving a 1-inch border","Tear fresh mozzarella and distribute evenly over the sauce","Drizzle with olive oil and season with salt and pepper","Bake for 10-12 minutes until crust is golden and cheese is bubbly","Remove from oven, top with fresh basil leaves, and let cool for 2 minutes before slicing"]},
+            {id:9,name:"Salmon Teriyaki",image:"🐟",time:30,calories:420,protein:38,carbs:42,fat:12,diet:"non-veg",cuisine:"Japanese",ingredients:["Salmon fillets","Teriyaki sauce","Rice","Sesame seeds","Green onions"],optional:["Pickled ginger","Wasabi","Edamame"],steps:["Pat salmon fillets dry and season with salt and pepper","Marinate salmon in teriyaki sauce for 15 minutes at room temperature","Heat a non-stick pan over medium-high heat with a little oil","Place salmon skin-side down and cook for 4-5 minutes until skin is crispy","Flip carefully and cook for another 3-4 minutes, basting with teriyaki sauce","Remove from heat when salmon is cooked through but still moist inside","Serve over steamed rice, drizzle with remaining teriyaki sauce","Garnish with sesame seeds and sliced green onions"]},
+            {id:10,name:"Vegetable Biryani",image:"🍚",time:60,calories:450,protein:12,carbs:78,fat:12,diet:"veg",cuisine:"Indian",ingredients:["Basmati rice","Mixed vegetables","Biryani spices","Onions","Fresh coriander and mint"],optional:["Saffron milk","Fried cashews","Raisins"],steps:["Soak basmati rice for 30 minutes, then drain","Parboil rice with whole spices until 70% cooked, drain and set aside","In a heavy-bottomed pot, heat oil and sauté mixed vegetables with ginger-garlic paste","Add yogurt, biryani masala, salt, and cook vegetables until tender","Layer half the vegetables at the bottom of the pot","Add a layer of half the rice, then remaining vegetables, then remaining rice","Top with fried onions, fresh herbs, and saffron milk","Cover tightly and cook on low heat (dum) for 20 minutes","Let rest for 5 minutes, then gently mix and serve hot with raita"]},
+            {id:11,name:"Greek Salad",image:"🥗",time:15,calories:280,protein:8,carbs:18,fat:20,diet:"veg",cuisine:"Greek",ingredients:["Tomatoes","Cucumber","Feta cheese","Kalamata olives","Red onion","Olive oil"],optional:["Oregano","Capers","Green bell pepper"],steps:["Cut tomatoes and cucumber into bite-sized chunks","Slice red onion thinly and soak in cold water for 5 minutes to reduce sharpness","In a large bowl, combine tomatoes, cucumber, and drained onion","Add pitted Kalamata olives","Crumble feta cheese over the vegetables","Drizzle generously with olive oil and fresh lemon juice","Season with salt, pepper, and dried oregano","Toss gently and serve immediately at room temperature"]},
+            {id:12,name:"Beef Burger",image:"🍔",time:35,calories:720,protein:42,carbs:54,fat:36,diet:"non-veg",cuisine:"American",ingredients:["Ground beef","Burger buns","Cheddar cheese","Lettuce","Tomato","Onion","Pickles"],optional:["Bacon","Special sauce","Jalapeños"],steps:["Divide ground beef into 4 equal portions and shape into patties, slightly larger than the buns","Season generously with salt and pepper on both sides","Preheat grill or pan to high heat","Cook patties for 4 minutes on first side without moving them","Flip and cook for 3-4 minutes more, adding cheese in the last minute to melt","Toast burger buns cut-side down on the grill for 1 minute","Assemble burgers: bottom bun, sauce, lettuce, patty with cheese, tomato, onion, pickles, top bun","Serve immediately with fries or a side salad"]},
+            {id:13,name:"Tom Yum Soup",image:"🍲",time:30,calories:180,protein:22,carbs:12,fat:6,diet:"non-veg",cuisine:"Thai",ingredients:["Shrimp","Chicken stock","Lemongrass","Galangal","Kaffir lime leaves","Thai chilies","Fish sauce"],optional:["Straw mushrooms","Cherry tomatoes","Cilantro"],steps:["Bring chicken stock to a boil in a large pot","Add lemongrass, galangal, and kaffir lime leaves, simmer for 5 minutes","Add Thai chilies (crushed) and mushrooms if using","Season with fish sauce to taste","Add shrimp and cherry tomatoes, cook for 3-4 minutes until shrimp turn pink","Remove from heat and add fresh lime juice","Taste and adjust seasoning with more fish sauce or lime as needed","Serve hot garnished with fresh cilantro"]},
+            {id:14,name:"Fluffy Pancakes",image:"🥞",time:20,calories:380,protein:12,carbs:58,fat:12,diet:"veg",cuisine:"American",ingredients:["All-purpose flour","Eggs","Milk","Butter","Sugar","Baking powder"],optional:["Maple syrup","Fresh berries","Whipped cream"],steps:["In a large bowl, whisk together flour, sugar, baking powder, and a pinch of salt","In another bowl, beat eggs and mix in milk and melted butter","Pour wet ingredients into dry ingredients and mix until just combined (batter should be slightly lumpy)","Heat a non-stick pan or griddle over medium heat and lightly grease","Pour 1/4 cup batter for each pancake onto the hot surface","Cook until bubbles form on surface and edges look set, about 2-3 minutes","Flip and cook for another 1-2 minutes until golden brown","Serve hot stacked with butter and maple syrup"]},
+            {id:15,name:"Chicken Tikka Masala",image:"🍛",time:55,calories:520,protein:48,carbs:28,fat:24,diet:"non-veg",cuisine:"Indian",ingredients:["Chicken thighs","Tikka spices","Heavy cream","Tomato sauce","Ginger-garlic paste","Yogurt"],optional:["Kasuri methi","Garam masala","Fresh cilantro"],steps:["Mix chicken with yogurt, tikka spices, and ginger-garlic paste, marinate for at least 2 hours","Thread marinated chicken onto skewers and grill or broil until charred and cooked through","In a large pan, heat oil and sauté onions until golden","Add ginger-garlic paste and tomato puree, cook until oil separates","Add remaining tikka spices and cook for 2 minutes","Pour in cream and bring to a gentle simmer","Add the grilled chicken pieces to the sauce","Simmer for 10-15 minutes, finish with kasuri methi and garam masala","Serve hot with naan bread or basmati rice"]},
+            {id:16,name:"Caprese Salad",image:"🍅",time:10,calories:260,protein:14,carbs:12,fat:18,diet:"veg",cuisine:"Italian",ingredients:["Tomatoes","Fresh mozzarella","Fresh basil","Olive oil","Balsamic vinegar"],optional:["Sea salt flakes","Cracked black pepper","Balsamic glaze"],steps:["Slice tomatoes and mozzarella into 1/2-inch thick rounds","Arrange alternating slices of tomato and mozzarella on a serving platter","Tuck fresh basil leaves between the slices","Drizzle generously with high-quality extra virgin olive oil","Add a splash of balsamic vinegar","Season with sea salt and cracked black pepper","Let sit for 5 minutes before serving"]},
+            {id:17,name:"Tacos al Pastor",image:"🌮",time:40,calories:480,protein:32,carbs:45,fat:20,diet:"non-veg",cuisine:"Mexican",ingredients:["Pork shoulder","Pineapple","Corn tortillas","Achiote paste","Chipotle peppers","Onion","Cilantro"],optional:["Lime wedges","Salsa verde","Radishes"],steps:["Marinate pork with achiote paste, chipotle, pineapple juice for 2 hours","Heat a large skillet over high heat","Cook marinated pork until caramelized and cooked through","Warm corn tortillas on the griddle","Chop cooked pork into small pieces","Fill tortillas with pork, grilled pineapple, diced onion, and cilantro","Serve with lime wedges and salsa"]},
+            {id:18,name:"Shakshuka",image:"🍳",time:30,calories:340,protein:18,carbs:28,fat:20,diet:"veg",cuisine:"Middle Eastern",ingredients:["Eggs","Crushed tomatoes","Bell peppers","Onion","Cumin","Paprika","Feta cheese"],optional:["Fresh parsley","Crusty bread","Hot sauce"],steps:["Heat olive oil in a large skillet and sauté onions until soft","Add diced bell peppers and cook for 5 minutes","Add crushed tomatoes, cumin, paprika, salt, and pepper","Simmer sauce for 10 minutes until thickened","Make 6 wells in the sauce and crack an egg into each","Cover and cook until eggs are set to your liking","Crumble feta cheese over the top","Serve hot with crusty bread"]},
+            {id:19,name:"Beef Tacos",image:"🌮",time:25,calories:520,protein:35,carbs:42,fat:24,diet:"non-veg",cuisine:"Mexican",ingredients:["Ground beef","Taco seasoning","Taco shells","Lettuce","Tomato","Cheddar cheese","Sour cream"],optional:["Jalapeños","Guacamole","Salsa"],steps:["Brown ground beef in a large skillet over medium-high heat","Drain excess fat and add taco seasoning with water","Simmer for 5 minutes until sauce thickens","Warm taco shells according to package directions","Fill shells with seasoned beef","Top with shredded lettuce, diced tomatoes, and cheese","Add sour cream and serve"]},
+            {id:20,name:"Mushroom Risotto",image:"🍄",time:45,calories:420,protein:14,carbs:68,fat:14,diet:"veg",cuisine:"Italian",ingredients:["Arborio rice","Mushrooms","Vegetable stock","White wine","Parmesan cheese","Butter"],optional:["Truffle oil","Fresh thyme","Extra parmesan"],steps:["Slice mushrooms and sauté in butter until golden, set aside","In the same pan, add more butter and sauté onions until translucent","Add arborio rice and toast for 2 minutes","Pour in white wine and stir until absorbed","Add hot stock one ladle at a time, stirring constantly","Continue adding stock until rice is creamy and al dente (about 18 minutes)","Stir in sautéed mushrooms, butter, and parmesan","Season and serve immediately"]}
+        ];
+
+        // Extract unique ingredients from all recipes
+        const allIngredients = new Set();
+        recipes.forEach(recipe => {
+            recipe.ingredients.forEach(ing => {
+                // Normalize ingredient names
+                const normalized = ing.split('(')[0].trim().replace(/^\d+g?\s*/, '').replace(/^\d+ml\s*/, '');
+                allIngredients.add(normalized);
+            });
+        });
+
+        const ingredientsList = Array.from(allIngredients).sort();
+        let selectedIngredients = [];
+        let filters = {
+            diet: 'all',
+            time: 'all',
+            maxCalories: 720,
+            sortBy: 'match'
+        };
+
+        // Toggle filters
+        function toggleFilters() {
+            const content = document.getElementById('filtersContent');
+            const toggle = document.getElementById('filterToggle');
+            content.classList.toggle('collapsed');
+            toggle.classList.toggle('active');
+        }
+
+        // Set diet filter
+        function setDietFilter(diet) {
+            filters.diet = diet;
+            document.querySelectorAll('[data-diet]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.diet === diet);
+            });
+            applyFilters();
+        }
+
+        // Set time filter
+        function setTimeFilter(time) {
+            filters.time = time;
+            document.querySelectorAll('[data-time]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.time === time);
+            });
+            applyFilters();
+        }
+
+        // Update calories
+        function updateCalories() {
+            const value = document.getElementById('caloriesSlider').value;
+            document.getElementById('caloriesValue').textContent = value + ' cal';
+            filters.maxCalories = parseInt(value);
+            applyFilters();
+        }
+
+        // Open/close panel
+        document.getElementById('openPanel').addEventListener('click', () => {
+            document.getElementById('sidePanel').classList.add('active');
+            renderIngredientsList();
+        });
+
+        document.getElementById('closePanel').addEventListener('click', () => {
+            document.getElementById('sidePanel').classList.remove('active');
+        });
+
+        // Search ingredients in main search bar
+        const mainSearchInput = document.getElementById('mainSearchInput');
+        const searchDropdown = document.getElementById('searchDropdown');
+
+        mainSearchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            
+            if (searchTerm.length === 0) {
+                searchDropdown.style.display = 'none';
+                return;
+            }
+
+            const filtered = ingredientsList.filter(ing => 
+                ing.toLowerCase().includes(searchTerm) && !selectedIngredients.includes(ing)
+            );
+
+            if (filtered.length === 0) {
+                searchDropdown.style.display = 'none';
+                return;
+            }
+
+            searchDropdown.style.display = 'block';
+            searchDropdown.innerHTML = filtered.slice(0, 10).map(ing => {
+                const count = recipes.filter(r => 
+                    r.ingredients.some(i => i.includes(ing))
+                ).length;
+                
+                return `
+                    <div class="ingredient-list-item" onclick="selectIngredientFromSearch('${ing.replace(/'/g, "\\'")}')">
+                        <div class="ingredient-name">${ing}</div>
+                        <div class="ingredient-count">${count} recipes</div>
+                        <div class="select-indicator">+</div>
+                    </div>
+                `;
+            }).join('');
+        });
+
+        // Click outside to close dropdown
+        document.addEventListener('click', (e) => {
+            if (!mainSearchInput.contains(e.target) && !searchDropdown.contains(e.target)) {
+                searchDropdown.style.display = 'none';
+            }
+        });
+
+        // Select ingredient from search dropdown
+        function selectIngredientFromSearch(ingredient) {
+            if (!selectedIngredients.includes(ingredient)) {
+                selectedIngredients.push(ingredient);
+                renderSelectedIngredients();
+                applyFilters();
+                renderIngredientsList(document.getElementById('panelSearchInput').value.toLowerCase());
+            }
+            mainSearchInput.value = '';
+            searchDropdown.style.display = 'none';
+        }
+
+        // Search ingredients
+        document.getElementById('panelSearchInput').addEventListener('input', (e) => {
+            renderIngredientsList(e.target.value.toLowerCase());
+        });
+
+        // Render ingredients list in panel
+        function renderIngredientsList(searchTerm = '') {
+            const content = document.getElementById('panelContent');
+            const filtered = ingredientsList.filter(ing => 
+                ing.toLowerCase().includes(searchTerm)
+            );
+
+            content.innerHTML = filtered.map(ing => {
+                const count = recipes.filter(r => 
+                    r.ingredients.some(i => i.includes(ing))
+                ).length;
+                const isSelected = selectedIngredients.includes(ing);
+                
+                return `
+                    <div class="ingredient-list-item ${isSelected ? 'selected' : ''}" 
+                         onclick="toggleIngredient('${ing.replace(/'/g, "\\'")}')">
+                        <div class="ingredient-name">${ing}</div>
+                        <div class="ingredient-count">${count} recipes</div>
+                        <div class="select-indicator">${isSelected ? '✓' : '+'}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Toggle ingredient selection
+        function toggleIngredient(ingredient) {
+            const index = selectedIngredients.indexOf(ingredient);
+            if (index > -1) {
+                selectedIngredients.splice(index, 1);
+            } else {
+                selectedIngredients.push(ingredient);
+            }
+            renderSelectedIngredients();
+            renderIngredientsList(document.getElementById('panelSearchInput').value.toLowerCase());
+            applyFilters();
+        }
+
+        // Render selected ingredients chips
+        function renderSelectedIngredients() {
+            const container = document.getElementById('selectedIngredients');
+            const clearBtn = document.getElementById('clearAllBtn');
+            
+            if (selectedIngredients.length === 0) {
+                container.innerHTML = '';
+                clearBtn.style.display = 'none';
+                return;
+            }
+
+            clearBtn.style.display = 'block';
+            container.innerHTML = selectedIngredients.map(ing => `
+                <div class="ingredient-chip">
+                    ${ing}
+                    <button class="remove-chip" onclick="toggleIngredient('${ing.replace(/'/g, "\\'")}')">✕</button>
+                </div>
+            `).join('');
+        }
+
+        // Clear all selections
+        function clearAll() {
+            selectedIngredients = [];
+            renderSelectedIngredients();
+            applyFilters();
+            renderIngredientsList();
+        }
+
+        // Apply filters and show results
+        function applyFilters() {
+            const grid = document.getElementById('recipeGrid');
+            const emptyState = document.getElementById('emptyState');
+            const resultsCount = document.getElementById('resultsCount');
+
+            if (selectedIngredients.length === 0) {
+                grid.innerHTML = '';
+                emptyState.style.display = 'block';
+                resultsCount.textContent = '';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+
+            // Filter recipes
+            let filteredRecipes = recipes.filter(recipe => {
+                // Diet filter
+                if (filters.diet !== 'all' && recipe.diet !== filters.diet) return false;
+
+                // Time filter
+                if (filters.time === 'quick' && recipe.time > 30) return false;
+                if (filters.time === 'medium' && (recipe.time <= 30 || recipe.time > 60)) return false;
+                if (filters.time === 'long' && recipe.time <= 60) return false;
+
+                // Calories filter
+                if (recipe.calories > filters.maxCalories) return false;
+
+                return true;
+            });
+
+            // Calculate match percentage for each recipe
+            filteredRecipes = filteredRecipes.map(recipe => {
+                const recipeIngredients = recipe.ingredients.map(i => 
+                    i.split('(')[0].trim().replace(/^\d+g?\s*/, '').replace(/^\d+ml\s*/, '')
+                );
+                const matched = selectedIngredients.filter(ing => 
+                    recipeIngredients.some(ri => ri.includes(ing) || ing.includes(ri))
+                );
+                const matchPercentage = Math.round((matched.length / recipeIngredients.length) * 100);
+                
+                return {
+                    ...recipe,
+                    matchedIngredients: matched,
+                    matchPercentage,
+                    totalIngredients: recipeIngredients.length
+                };
+            });
+
+            // Sort recipes
+            const sortBy = document.getElementById('sortBy').value;
+            filteredRecipes.sort((a, b) => {
+                if (sortBy === 'match') return b.matchPercentage - a.matchPercentage;
+                if (sortBy === 'time') return a.time - b.time;
+                if (sortBy === 'calories') return a.calories - b.calories;
+                if (sortBy === 'name') return a.name.localeCompare(b.name);
+                return 0;
+            });
+
+            resultsCount.textContent = `Found ${filteredRecipes.length} recipes`;
+
+            // Render recipe cards
+            grid.innerHTML = filteredRecipes.map(recipe => `
+                <div class="recipe-card" onclick="openRecipeModal(${recipe.id})">
+                    <div class="match-badge">${recipe.matchPercentage}% Match</div>
+                    <div class="recipe-image">${recipe.image}</div>
+                    <div class="recipe-content">
+                        <div class="tag tag-${recipe.diet}">${recipe.diet === 'veg' ? 'Vegetarian' : 'Non-Veg'}</div>
+                        <div class="recipe-title">${recipe.name}</div>
+                        <div class="recipe-meta">
+                            <span class="meta-item">⏱️ ${recipe.time} min</span>
+                            <span class="meta-item">🔥 ${recipe.calories} cal</span>
+                        </div>
+                        <div class="nutrition-preview">
+                            <span class="nutrition-badge">💪 ${recipe.protein}g protein</span>
+                            <span class="nutrition-badge">🌾 ${recipe.carbs}g carbs</span>
+                        </div>
+                        <div class="ingredients-match">
+                            <div class="match-title">You have ${recipe.matchedIngredients.length}/${recipe.totalIngredients} ingredients</div>
+                            <div class="ingredient-tags">
+                                ${recipe.matchedIngredients.slice(0, 3).map(ing => 
+                                    `<span class="ingredient-tag matched">✓ ${ing}</span>`
+                                ).join('')}
+                                ${recipe.totalIngredients - recipe.matchedIngredients.length > 0 ? 
+                                    `<span class="ingredient-tag missing">+${recipe.totalIngredients - recipe.matchedIngredients.length} more needed</span>` : 
+                                    ''}
+                            </div>
+                        </div>
+                        <button class="view-recipe-btn" onclick="event.stopPropagation(); openRecipeModal(${recipe.id})">View Recipe</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Open recipe modal
+        function openRecipeModal(recipeId) {
+            const recipe = recipes.find(r => r.id === recipeId);
+            if (!recipe) return;
+
+            const modal = document.getElementById('modal');
+            const header = document.getElementById('modalHeader');
+            const body = document.getElementById('modalBody');
+
+            header.innerHTML = `
+                <button class="close-modal" onclick="closeModal()">✕</button>
+                ${recipe.image}
+            `;
+
+            body.innerHTML = `
+                <h1 class="modal-title">${recipe.name}</h1>
+                <div class="modal-meta">
+                    <span class="meta-item">⏱️ ${recipe.time} minutes</span>
+                    <span class="meta-item">🔥 ${recipe.calories} calories</span>
+                    <span class="meta-item">🍽️ ${recipe.cuisine}</span>
+                    <span class="meta-item tag tag-${recipe.diet}">${recipe.diet === 'veg' ? 'Vegetarian' : 'Non-Vegetarian'}</span>
+                </div>
+
+                <button class="youtube-btn" onclick="window.open('https://www.youtube.com/results?search_query=${encodeURIComponent(recipe.name + ' recipe')}', '_blank')">
+                    ▶️ Watch Tutorial on YouTube
+                </button>
+
+                <h2 class="section-title">Nutritional Information</h2>
+                <div class="nutrition-grid">
+                    <div class="nutrition-item">
+                        <div class="nutrition-value">${recipe.calories}</div>
+                        <div class="nutrition-label">Calories</div>
+                    </div>
+                    <div class="nutrition-item">
+                        <div class="nutrition-value">${recipe.protein}g</div>
+                        <div class="nutrition-label">Protein</div>
+                    </div>
+                    <div class="nutrition-item">
+                        <div class="nutrition-value">${recipe.carbs}g</div>
+                        <div class="nutrition-label">Carbs</div>
+                    </div>
+                    <div class="nutrition-item">
+                        <div class="nutrition-value">${recipe.fat}g</div>
+                        <div class="nutrition-label">Fat</div>
+                    </div>
+                </div>
+
+                <h2 class="section-title">Ingredients</h2>
+                <ul class="ingredients-list">
+                    ${recipe.ingredients.map(ing => `<li class="ingredient-item">${ing}</li>`).join('')}
+                </ul>
+
+                ${recipe.optional && recipe.optional.length > 0 ? `
+                    <div class="optional-section">
+                        <div class="optional-title">Optional Ingredients</div>
+                        <ul class="ingredients-list">
+                            ${recipe.optional.map(ing => `<li class="ingredient-item">${ing}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+
+                <h2 class="section-title">Cooking Instructions</h2>
+                <ol class="steps-list">
+                    ${recipe.steps.map((step, i) => `
+                        <li class="step-item">
+                            <div class="step-number">${i + 1}</div>
+                            <div class="step-text">${step}</div>
+                        </li>
+                    `).join('')}
+                </ol>
+            `;
+
+            modal.classList.add('active');
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('modal').addEventListener('click', (e) => {
+            if (e.target.id === 'modal') {
+                closeModal();
+            }
+        });
+
+        // Logout function
+        function logout() {
+            window.location.href = 'login.html';
+        }
+
+        // Initialize
+        renderSelectedIngredients();
+        applyFilters();
+    </script>
+</body>
+</html>
